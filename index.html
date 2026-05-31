@@ -504,7 +504,6 @@
                 </div>
             </div>
             <div style="position: relative; flex: 1; max-width: 300px;">
-                <input type="text" id="dashboard-search" placeholder="Search SKU, Order #, or Description..." style="padding: 0.4rem 0.4rem 0.4rem 2rem;" oninput="handleDashboardSearch(this.value)">
                 <input type="text" id="dashboard-search" placeholder="Search SKU, Order #, or Description..." style="padding: 0.4rem 0.4rem 0.4rem 2rem;" oninput="handleDashboardSearch(this.value)" autocomplete="off">
                 <i data-lucide="search" style="position: absolute; left: 8px; top: 50%; transform: translateY(-50%); width: 14px; color: var(--secondary);"></i>
             </div>
@@ -610,7 +609,6 @@
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
                 <h2>Validation Data Log</h2>
                 <div style="position: relative; flex: 1; max-width: 400px; margin: 0 2rem;">
-                    <input type="text" id="data-search" placeholder="Search Order, SKU, Description..." style="padding: 0.4rem 0.4rem 0.4rem 2rem;" oninput="handleDataSearch(this.value)">
                     <input type="text" id="data-search" placeholder="Search Order, SKU, Description..." style="padding: 0.4rem 0.4rem 0.4rem 2rem;" oninput="handleDataSearch(this.value)" autocomplete="off">
                     <i data-lucide="search" style="position: absolute; left: 8px; top: 50%; transform: translateY(-50%); width: 14px; color: var(--secondary);"></i>
                 </div>
@@ -685,7 +683,6 @@
         <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid #eee; padding-top: 1rem;">
             <h3 style="margin: 0;">Registered Users</h3>
             <div style="position: relative;">
-                <input type="text" id="user-search" placeholder="Search..." style="width: 200px; padding: 0.4rem 0.4rem 0.4rem 2rem;" oninput="handleUserSearch(this.value)">
                 <input type="text" id="user-search" placeholder="Search..." style="width: 200px; padding: 0.4rem 0.4rem 0.4rem 2rem;" oninput="handleUserSearch(this.value)" autocomplete="off">
                 <i data-lucide="search" style="position: absolute; left: 8px; top: 50%; transform: translateY(-50%); width: 14px; color: var(--secondary);"></i>
             </div>
@@ -792,7 +789,6 @@
         </div>
         <div class="form-group">
             <label>Enter Supercode to Clear All Logs</label>
-            <input type="password" id="supercode-input" placeholder="****">
             <input type="password" id="supercode-input" placeholder="****" autocomplete="new-password">
         </div>
         <button class="btn btn-danger" style="width: 100%; margin-top: 1rem;" onclick="confirmClearLogs()"><i data-lucide="shield-alert"></i> Confirm Clear All</button>
