@@ -44,6 +44,48 @@
             top: 0;
             z-index: 100;
         }
+        
+        .nav-item {
+            position: relative;
+        }
+
+        .nav-preview {
+            display: none;
+            position: absolute;
+            top: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            background: white;
+            color: #1e293b;
+            padding: 1rem;
+            border-radius: 8px;
+            box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1);
+            border: 1px solid #e2e8f0;
+            width: 220px;
+            z-index: 200;
+            margin-top: 10px;
+            pointer-events: none;
+            text-align: left;
+        }
+
+        .nav-preview::before {
+            content: '';
+            position: absolute;
+            top: -6px;
+            left: 50%;
+            transform: translateX(-50%);
+            border-left: 6px solid transparent;
+            border-right: 6px solid transparent;
+            border-bottom: 6px solid white;
+        }
+
+        .nav-item:hover .nav-preview {
+            display: block;
+        }
+
+        .nav-preview h5 { margin: 0 0 0.5rem 0; font-size: 0.85rem; border-bottom: 1px solid #eee; padding-bottom: 0.3rem; color: var(--secondary); }
+        .nav-preview p { margin: 0.3rem 0; font-size: 0.75rem; color: #475569; display: flex; justify-content: space-between; }
+        .nav-preview b { color: var(--primary); }
 
         nav button {
             background: none;
@@ -348,6 +390,32 @@
             background-color: rgba(0,0,0,0.5);
         }
 
+        /* Lock Screen Overlay */
+        #lock-screen {
+            display: none;
+            position: fixed;
+            z-index: 3000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: #1e293b;
+            color: white;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+        }
+        #lock-screen h2 { color: white; margin-bottom: 0.5rem; }
+        #lock-screen p { color: #94a3b8; margin-bottom: 2rem; }
+        #lock-pin-input {
+            max-width: 250px;
+            margin-bottom: 1rem;
+            text-align: center;
+            font-size: 1.5rem;
+            letter-spacing: 0.5rem;
+        }
+
         .modal-content {
             background-color: #fff;
             margin: 5% auto;
@@ -365,22 +433,101 @@
             margin-bottom: 1rem;
             border-bottom: 1px solid #eee;
         }
+
+        /* Scroll Helper Buttons Styling */
+        .scroll-controls {
+            position: fixed;
+            right: 25px;
+            bottom: 30px;
+            display: flex;
+            flex-direction: column;
+            gap: 0.8rem;
+            z-index: 1000;
+        }
+
+        .scroll-btn {
+            width: 45px;
+            height: 45px;
+            border-radius: 50%;
+            background: var(--card);
+            border: 1px solid #e2e8f0;
+            color: var(--secondary);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .scroll-btn:hover {
+            background: var(--primary);
+            color: #1e293b;
+            border-color: var(--primary);
+            transform: scale(1.1);
+        }
     </style>
 </head>
 <body>
 
+<!-- Lock Screen Overlay -->
+<div id="lock-screen">
+    <i data-lucide="lock" style="width: 64px; height: 64px; margin-bottom: 1.5rem; color: var(--primary);"></i>
+    <h2>System Locked</h2>
+    <p>Please enter PIN to resume validation</p>
+    <div style="width: 100%; max-width: 300px; padding: 0 2rem;">
+        <input type="password" id="lock-pin-input" placeholder="••••" onkeyup="handleLockKeyPress(event)">
+        <button class="btn btn-primary" style="width: 100%;" onclick="unlockApp()"><i data-lucide="unlock"></i> Unlock System</button>
+    </div>
+</div>
+
 <header>
     <h1><i data-lucide="shield-check"></i> PRO-Validation Tracking System</h1>
-    <div class="live-clock" id="realtime-clock">
-        <span id="clock-date"></span> | <span id="clock-time"></span>
+    <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 0.5rem;">
+        <div class="live-clock" id="realtime-clock">
+            <span id="clock-date"></span> | <span id="clock-time"></span>
+        </div>
+        <button class="btn btn-secondary btn-sm" onclick="lockApp()" style="font-size: 0.7rem; padding: 3px 10px; border-radius: 4px; opacity: 0.8;">
+            <i data-lucide="lock" style="width: 12px; height: 12px;"></i> Lock System
+        </button>
     </div>
 </header>
 
 <nav>
-    <button onclick="showView('dashboard')" id="nav-dashboard" class="active"><i data-lucide="layout-dashboard"></i> Dashboard</button>
-    <button onclick="showView('attendance')" id="nav-attendance"><i data-lucide="clipboard-check"></i> Attendance</button>
-    <button onclick="showView('data')" id="nav-data"><i data-lucide="database"></i> Data</button>
+    <div class="nav-item">
+        <button onclick="showView('dashboard')" id="nav-dashboard" class="active"><i data-lucide="layout-dashboard"></i> Dashboard</button>
+        <div class="nav-preview">
+            <h5><i data-lucide="bar-chart-2" style="width:12px"></i> Dashboard Summary</h5>
+            <p>Total Tasks <b id="prev-dash-total">0</b></p>
+            <p>Pending <b id="prev-dash-pending">0</b></p>
+            <p>On-going <b id="prev-dash-ongoing">0</b></p>
+        </div>
+    </div>
+    <div class="nav-item">
+        <button onclick="showView('attendance')" id="nav-attendance"><i data-lucide="clipboard-check"></i> Attendance</button>
+        <div class="nav-preview">
+            <h5><i data-lucide="users" style="width:12px"></i> Attendance Today</h5>
+            <p>Present <b id="prev-att-present">0</b></p>
+            <p>On Break <b id="prev-att-break">0</b></p>
+            <p>Completed <b id="prev-att-completed">0</b></p>
+        </div>
+    </div>
+    <div class="nav-item">
+        <button onclick="showView('data')" id="nav-data"><i data-lucide="database"></i> Data</button>
+        <div class="nav-preview">
+            <h5><i data-lucide="database" style="width:12px"></i> Validation Log</h5>
+            <p>Total Records <b id="prev-data-total">0</b></p>
+            <p>Avg. Duration <b id="prev-data-avg">0m</b></p>
+        </div>
+    </div>
 </nav>
+
+<!-- Scroll Helper Buttons -->
+<div class="scroll-controls">
+    <button class="scroll-btn" onclick="scrollToTop()" title="Back to Top"><i data-lucide="chevrons-up"></i></button>
+    <button class="scroll-btn" onclick="scrollPage(-400)" title="Scroll Up"><i data-lucide="chevron-up"></i></button>
+    <button class="scroll-btn" onclick="scrollPage(400)" title="Scroll Down"><i data-lucide="chevron-down"></i></button>
+</div>
 
 <div class="container">
     <div id="toast-container"></div>
@@ -942,6 +1089,55 @@
     let activeDashboardTab = 'On-going';
     let activeDispositionTab = 'All';
     const rowsPerPage = 10;
+    
+    // Lock Screen State
+    let inactivityTimer;
+    const INACTIVITY_LIMIT = 30 * 60 * 1000; // 30 Minutes
+
+    function resetInactivityTimer() {
+        if (document.getElementById('lock-screen').style.display === 'flex') return;
+        clearTimeout(inactivityTimer);
+        inactivityTimer = setTimeout(lockApp, INACTIVITY_LIMIT);
+    }
+
+    function lockApp() {
+        const lockScreen = document.getElementById('lock-screen');
+        lockScreen.style.display = 'flex';
+        document.getElementById('lock-pin-input').value = '';
+        document.getElementById('lock-pin-input').focus();
+        lucide.createIcons();
+    }
+
+    function unlockApp() {
+        const pin = document.getElementById('lock-pin-input').value;
+        // Using the same supercode "1234" as defined in your existing clear logs logic
+        if (pin === "1234") {
+            document.getElementById('lock-screen').style.display = 'none';
+            showToast("System Unlocked. Welcome back!");
+            resetInactivityTimer();
+        } else {
+            showToast("Invalid PIN. Access Denied.", "danger");
+            document.getElementById('lock-pin-input').value = '';
+        }
+    }
+
+    function handleLockKeyPress(e) {
+        if (e.key === 'Enter') unlockApp();
+    }
+
+    // Setup Event Listeners for Inactivity
+    ['mousemove', 'mousedown', 'keypress', 'scroll', 'touchstart'].forEach(evt => {
+        document.addEventListener(evt, resetInactivityTimer, true);
+    });
+
+    // Scrolling Logic
+    function scrollToTop() { window.scrollTo({ top: 0, behavior: 'smooth' }); }
+    function scrollPage(amount) {
+        const wrapper = document.querySelector('.view.active .table-wrapper');
+        if (wrapper) wrapper.scrollBy({ top: amount, behavior: 'smooth' });
+        else window.scrollBy({ top: amount, behavior: 'smooth' });
+    }
+
     const usersPerPage = 5;
     const dataRowsPerPage = 15;
 
@@ -2477,6 +2673,24 @@
         document.getElementById('dash-stat-val-pending').innerText = pendingCount;
         document.getElementById('dash-stat-ongoing-count').innerText = ongoingCount;
 
+        // Update Nav Previews
+        document.getElementById('prev-dash-total').innerText = totalValidations;
+        document.getElementById('prev-dash-pending').innerText = pendingCount;
+        document.getElementById('prev-dash-ongoing').innerText = ongoingCount;
+        document.getElementById('prev-data-total').innerText = validationData.length;
+
+        // Calculate global average duration for the Data Preview
+        const allCompleted = validationData.filter(d => 
+            (d.icStatus || '').toLowerCase() === 'completed' && d.timeICStatus && d.timeICRem
+        );
+        let globalTotalMin = 0;
+        allCompleted.forEach(d => {
+            const diff = calculateDurationMinutes(d.timeICStatus, d.timeICRem);
+            if (diff !== null) globalTotalMin += diff;
+        });
+        const globalAvg = allCompleted.length > 0 ? Math.round(globalTotalMin / allCompleted.length) : 0;
+        document.getElementById('prev-data-avg').innerText = `${globalAvg}m`;
+
         // Update Validation Monitor Cards
         const container = document.getElementById('ongoing-validations-container');
 
@@ -2591,6 +2805,11 @@
         document.getElementById('att-stat-present').innerText = stats.present;
         document.getElementById('att-stat-break').innerText = stats.onBreak;
         document.getElementById('att-stat-completed').innerText = stats.completed;
+
+        // Update Nav Previews
+        document.getElementById('prev-att-present').innerText = stats.present;
+        document.getElementById('prev-att-break').innerText = stats.onBreak;
+        document.getElementById('prev-att-completed').innerText = stats.completed;
     }
 
     // Initial Load - Asynchronous Entry Point
@@ -2609,6 +2828,10 @@
             
             const storedDispo = await db.get('dispoRemarksMaster', ["Release", "Hold", "Reject", "Partial Release"]);
             dispoRemarksMaster = Array.isArray(storedDispo) ? storedDispo : ["Release", "Hold", "Reject", "Partial Release"];
+
+            // Initial Lock and Timer Setup
+            lockApp();
+            resetInactivityTimer();
 
             setDefaultGlobalDates();
             updateDashboard();
