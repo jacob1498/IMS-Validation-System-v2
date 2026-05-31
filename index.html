@@ -1,0 +1,2424 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Attendance System</title>
+    <!-- Modern Icons Library -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        :root {
+            --primary: #49f5f1;
+            --secondary: #64748b;
+            --success: #22c55e;
+            --danger: #ef4444;
+            --bg: #f8fafc;
+            --card: #ffffff;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg);
+            margin: 0;
+            color: #1e293b;
+        }
+
+        header {
+            background: var(--card);
+            padding: 1rem 2rem;
+            border-bottom: 1px solid #e2e8f0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        header h1 { margin: 0; font-size: 1.5rem; color: var(--primary); display: flex; align-items: center; gap: 0.5rem; }
+
+        nav {
+            background: #1e293b;
+            padding: 1rem;
+            display: flex;
+            justify-content: center;
+            gap: 2rem;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        nav button {
+            background: none;
+            border: none;
+            color: #94a3b8;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            padding: 0.5rem 1rem;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        nav button.active {
+            color: white;
+            border-bottom: 2px solid var(--primary);
+        }
+
+        .container {
+            max-width: 100%;
+            margin: 1rem;
+            padding: 0 1rem;
+        }
+
+        .view { display: none; }
+        .view.active { display: block; }
+
+        .live-clock {
+            font-family: 'Courier New', Courier, monospace;
+            font-weight: bold;
+            color: var(--secondary);
+        }
+
+        .card {
+            background: var(--card);
+            padding: 1.5rem;
+            border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            margin-bottom: 1.5rem;
+        }
+
+        h2 { margin-top: 0; color: #334155; }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1rem;
+        }
+
+        .form-group {
+            margin-bottom: 1rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        input {
+            padding: 0.6rem;
+            border: 1px solid #cbd5e1;
+            border-radius: 4px;
+            font-size: 1rem;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        input:focus {
+            outline: 2px solid var(--primary);
+            border-color: transparent;
+        }
+
+        button.btn {
+            padding: 0.6rem 1.2rem;
+            border-radius: 4px;
+            border: none;
+            cursor: pointer;
+            font-weight: 600;
+            transition: opacity 0.2s;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+
+        .btn-primary { background: var(--primary); color: #1e293b; }
+        .btn-success { background: var(--success); color: white; }
+        .btn-danger { background: var(--danger); color: white; }
+        .btn-secondary { background: var(--secondary); color: white; }
+
+        .btn-group {
+            display: inline-flex;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .btn-group .btn {
+            border-radius: 0;
+            margin: 0;
+        }
+
+        .btn-group .btn:not(:last-child) {
+            border-right: 1px solid rgba(255,255,255,0.2);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1rem;
+        }
+
+        th, td {
+            text-align: left;
+            padding: 2px 8px;
+            border-bottom: 1px solid #e2e8f0;
+            font-size: 0.85rem;
+            white-space: nowrap;
+        }
+
+        th { background: #f1f5f9; }
+
+        .stat-card {
+            text-align: center;
+            padding: 0.5rem;
+        }
+        .stat-card h3 { font-size: 1.2rem; margin: 0; color: var(--primary); }
+        .stat-card p { font-size: 0.75rem; margin: 0; color: var(--secondary); }
+
+        /* Dashboard Validation Cards */
+        .ongoing-card {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            padding: 1.5rem;
+            border-top: 4px solid var(--danger);
+            position: relative;
+        }
+        .sku-image {
+            width: 200px;
+            height: 200px;
+            object-fit: contain;
+            margin-bottom: 1rem;
+            background: #ffffff;
+            border-radius: 8px;
+        }
+
+        /* Toast Styles */
+        #toast-container {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 2000;
+        }
+
+        .toast {
+            padding: 1rem 1.5rem;
+            border-radius: 4px;
+            margin-top: 10px;
+            color: white;
+            font-weight: 600;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            animation: slideIn 0.3s ease-out;
+            min-width: 200px;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .toast-success { background: var(--success); }
+        .toast-danger { background: var(--danger); }
+        .toast-info { background: var(--primary); }
+
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+
+        /* Sticky Table Header */
+        .table-wrapper {
+            max-height: 650px; /* Accommodate approx 15 rows like Excel */
+            overflow-y: auto;
+            position: relative;
+        }
+
+        /* Icon Sizing */
+        .lucide { width: 14px; height: 14px; }
+        .stat-card .lucide { width: 16px; height: 16px; margin-bottom: 0.2rem; color: var(--secondary); }
+
+        /* Global Filter Bar */
+        .global-filter-bar {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+            flex-wrap: wrap;
+            background: white;
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        thead th { position: sticky; top: 0; z-index: 5; background: #f1f5f9; }
+
+        footer {
+            margin-top: 4rem;
+            padding: 2rem;
+            background: #1e293b;
+            color: #94a3b8;
+            text-align: center;
+            font-size: 0.85rem;
+        }
+
+        /* Sub-navigation Tabs */
+        .sub-nav {
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+            border-bottom: 2px solid #e2e8f0;
+        }
+
+        .sub-nav button {
+            background: none;
+            border: none;
+            padding: 0.5rem 1rem;
+            cursor: pointer;
+            font-weight: 600;
+            color: #64748b;
+            transition: all 0.3s;
+        }
+
+        .sub-nav button.active {
+            color: var(--primary);
+            border-bottom: 2px solid var(--primary);
+            margin-bottom: -2px;
+        }
+
+        /* Attendance Stat Mini Cards */
+        .attendance-stats-row {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .mini-stat {
+            background: white;
+            padding: 1rem;
+            border-radius: 8px;
+            border-left: 4px solid var(--primary);
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+        }
+        .mini-stat p { margin: 0; font-size: 0.8rem; color: var(--secondary); font-weight: 600; }
+        .mini-stat h4 { margin: 0.2rem 0 0 0; font-size: 1.2rem; }
+
+        .scanner-box {
+            border: 2px dashed var(--primary);
+            padding: 2rem;
+            text-align: center;
+            background: #eff6ff;
+        }
+
+        /* New Layout for Attendance side-by-side */
+        .attendance-grid {
+            display: grid;
+            grid-template-columns: 380px 1fr;
+            gap: 1.5rem;
+            align-items: start;
+        }
+
+        .pagination {
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+            margin-top: 1rem;
+            align-items: center;
+            font-size: 0.9rem;
+        }
+
+        .pagination button:disabled {
+            background-color: #e2e8f0;
+            color: #94a3b8;
+            cursor: not-allowed;
+        }
+
+        .btn-sm { padding: 0.3rem 0.6rem; font-size: 0.8rem; }
+        .text-center { text-align: center; }
+
+        /* Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1001;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+        }
+
+        .modal-content {
+            background-color: #fff;
+            margin: 5% auto;
+            padding: 2rem;
+            border-radius: 8px;
+            width: 90%;
+            max-width: 600px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+            border-bottom: 1px solid #eee;
+        }
+    </style>
+</head>
+<body>
+
+<header>
+    <h1><i data-lucide="shield-check"></i> PRO-Validation Tracking System</h1>
+    <div class="live-clock" id="realtime-clock">
+        <span id="clock-date"></span> | <span id="clock-time"></span>
+    </div>
+</header>
+
+<nav>
+    <button onclick="showView('dashboard')" id="nav-dashboard" class="active"><i data-lucide="layout-dashboard"></i> Dashboard</button>
+    <button onclick="showView('attendance')" id="nav-attendance"><i data-lucide="clipboard-check"></i> Attendance</button>
+    <button onclick="showView('data')" id="nav-data"><i data-lucide="database"></i> Data</button>
+</nav>
+
+<div class="container">
+    <div id="toast-container"></div>
+
+    <datalist id="ic-remarks-list"></datalist>
+    <datalist id="dispo-remarks-list"></datalist>
+
+    <!-- Global Date Filter -->
+    <div class="global-filter-bar">
+        <span style="font-weight: 600; font-size: 0.9rem; color: var(--secondary); display: flex; align-items: center; gap: 0.5rem;"><i data-lucide="filter"></i> Global Date Filter:</span>
+        <div style="display: flex; align-items: center; gap: 0.5rem;">
+            <label style="font-size: 0.75rem; font-weight: bold; color: var(--secondary);">From</label>
+            <input type="date" id="global-start" onchange="refreshAllViews()" style="padding: 0.3rem; font-size: 0.85rem; width: auto;">
+        </div>
+        <div style="display: flex; align-items: center; gap: 0.5rem;">
+            <label style="font-size: 0.75rem; font-weight: bold; color: var(--secondary);">To</label>
+            <input type="date" id="global-end" onchange="refreshAllViews()" style="padding: 0.3rem; font-size: 0.85rem; width: auto;">
+        </div>
+        <div class="btn-group" style="margin-left: auto;">
+            <button class="btn btn-secondary btn-sm" onclick="resetGlobalFilter()"><i data-lucide="refresh-cw"></i> Reset to Today</button>
+            <button class="btn btn-secondary btn-sm" onclick="clearGlobalFilter()"><i data-lucide="filter-x"></i> Clear Filter</button>
+        </div>
+    </div>
+
+    <!-- Dashboard View -->
+    <div id="view-dashboard" class="view active">
+        <h2><i data-lucide="bar-chart-3"></i> Real-time Dashboard</h2>
+        
+        <h4 style="margin-top: 1.5rem; color: var(--secondary); font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em;"><i data-lucide="users"></i> Attendance Overview</h4>
+        <div class="grid" style="grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));">
+            <div class="card stat-card">
+                <i data-lucide="users"></i>
+                <p>Registered Users</p>
+                <h3 id="stat-users">0</h3>
+            </div>
+            <div class="card stat-card">
+                <i data-lucide="user-check"></i>
+                <p>Present Today</p>
+                <h3 id="dash-stat-present">0</h3>
+            </div>
+            <div class="card stat-card">
+                <i data-lucide="coffee"></i>
+                <p>On Break</p>
+                <h3 id="dash-stat-break">0</h3>
+            </div>
+            <div class="card stat-card">
+                <i data-lucide="check-circle-2"></i>
+                <p>Completed Shift</p>
+                <h3 id="dash-stat-completed">0</h3>
+            </div>
+        </div>
+
+        <h4 style="margin-top: 1.5rem; color: var(--secondary); font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em;"><i data-lucide="database"></i> Validation Overview</h4>
+        <div class="grid" style="grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));">
+            <div class="card stat-card">
+                <i data-lucide="database"></i>
+                <p>Total Records</p>
+                <h3 id="dash-stat-total-val">0</h3>
+            </div>
+            <div class="card stat-card">
+                <i data-lucide="check-circle"></i>
+                <p>Completed</p>
+                <h3 id="dash-stat-val-completed">0</h3>
+            </div>
+            <div class="card stat-card">
+                <i data-lucide="clock-4"></i>
+                <p>Pending</p>
+                <h3 id="dash-stat-val-pending">0</h3>
+            </div>
+            <div class="card stat-card">
+                <i data-lucide="activity"></i>
+                <p>On-going Tasks</p>
+                <h3 id="dash-stat-ongoing-count">0</h3>
+            </div>
+        </div>
+
+        <h4 style="margin-top: 1.5rem; color: var(--secondary); font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em;"><i data-lucide="timer"></i> Aging Summary (On-going)</h4>
+        <div class="grid" style="grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));">
+            <div class="card stat-card" style="border-left: 4px solid var(--success);">
+                <i data-lucide="clock" style="color: var(--success);"></i>
+                <p>< 30 Mins</p>
+                <h3 id="dash-aging-low">0</h3>
+            </div>
+            <div class="card stat-card" style="border-left: 4px solid #f59e0b;">
+                <i data-lucide="clock" style="color: #f59e0b;"></i>
+                <p>30 - 60 Mins</p>
+                <h3 id="dash-aging-med">0</h3>
+            </div>
+            <div class="card stat-card" style="border-left: 4px solid var(--danger);">
+                <i data-lucide="alert-triangle" style="color: var(--danger);"></i>
+                <p>> 60 Mins</p>
+                <h3 id="dash-aging-high">0</h3>
+            </div>
+        </div>
+
+        <h4 style="margin-top: 1.5rem; color: var(--secondary); font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em;"><i data-lucide="trending-up"></i> Problematic Ranking</h4>
+        <div class="grid" style="grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1rem;">
+            <div class="card" style="padding: 1rem;">
+                <p style="margin: 0 0 0.8rem 0; font-size: 0.75rem; color: var(--secondary); font-weight: 600; display: flex; align-items: center; gap: 0.5rem;"><i data-lucide="award" style="color: var(--primary)"></i> Top SKUs by Order Volume</p>
+                <div id="top-sku-volume" style="display: flex; gap: 1.2rem; overflow-x: auto; padding-bottom: 0.5rem; min-height: 90px;"></div>
+            </div>
+            <div class="card" style="padding: 1rem;">
+                <p style="margin: 0 0 0.8rem 0; font-size: 0.75rem; color: var(--secondary); font-weight: 600; display: flex; align-items: center; gap: 0.5rem;"><i data-lucide="alert-octagon" style="color: var(--danger)"></i> Top SKUs by Total Rejected Qty</p>
+                <div id="top-sku-rejected" style="display: flex; gap: 1.2rem; overflow-x: auto; padding-bottom: 0.5rem; min-height: 90px;"></div>
+            </div>
+        </div>
+
+        <h2 style="margin-top: 2rem;"><i data-lucide="layers"></i> Validation Status Monitor</h2>
+        <div style="display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap; margin-top: 1rem;">
+            <div class="sub-nav" style="margin-bottom: 0;">
+                <button onclick="setDashboardTab('On-going')" id="dash-tab-Ongoing" class="active">On-going</button>
+                <button onclick="setDashboardTab('Pending')" id="dash-tab-Pending">Pending</button>
+                <button onclick="setDashboardTab('Completed')" id="dash-tab-Completed">Completed</button>
+            </div>
+            <div style="position: relative; flex: 1; max-width: 300px;">
+                <input type="text" id="dashboard-search" placeholder="Search SKU, Order #, or Description..." style="padding: 0.4rem 0.4rem 0.4rem 2rem;" oninput="handleDashboardSearch(this.value)">
+                <i data-lucide="search" style="position: absolute; left: 8px; top: 50%; transform: translateY(-50%); width: 14px; color: var(--secondary);"></i>
+            </div>
+        </div>
+
+        <div id="ongoing-validations-container" class="grid" style="grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));">
+            <!-- Ongoing validation cards will appear here -->
+        </div>
+    </div>
+
+    <!-- Attendance View -->
+    <div id="view-attendance" class="view">
+        <div class="attendance-stats-row">
+            <div class="mini-stat" style="border-left-color: var(--success);">
+                <p>PRESENT TODAY</p>
+                <h4 id="att-stat-present">0</h4>
+            </div>
+            <div class="mini-stat" style="border-left-color: #6366f1;">
+                <p>ON BREAK</p>
+                <h4 id="att-stat-break">0</h4>
+            </div>
+            <div class="mini-stat" style="border-left-color: var(--danger);">
+                <p>COMPLETED</p>
+                <h4 id="att-stat-completed">0</h4>
+            </div>
+        </div>
+
+        <div style="margin-bottom: 1rem; display: flex; justify-content: flex-end;">
+            <button class="btn btn-primary" onclick="toggleModal(true)"><i data-lucide="settings"></i> Manage User Master</button>
+        </div>
+        
+        <div class="attendance-grid">
+            <div class="card">
+                <h2>Attendance Terminal</h2>
+                <div class="scanner-box">
+                    <div class="form-group">
+                        <label>Scan User ID</label>
+                        <input type="text" id="scan-id" placeholder="Enter ID..." onkeyup="handleScan(event)">
+                    </div>
+                    <div class="form-group">
+                        <label>Select Shift</label>
+                        <select id="shift-select" style="padding: 0.6rem; border-radius: 4px; border: 1px solid #cbd5e1;">
+                            <option value="1st Shift">1st Shift</option>
+                            <option value="2nd Shift">2nd Shift</option>
+                            <option value="3rd Shift">3rd Shift</option>
+                        </select>
+                    </div>
+                    <div id="scan-feedback" style="margin-bottom: 1rem; font-weight: bold; height: 1.2rem; transition: color 0.3s;"></div>
+                    <div class="grid" style="grid-template-columns: 1fr 1fr; gap: 0.5rem;">
+                        <button class="btn btn-success" onclick="logAttendance('Clock In')"><i data-lucide="log-in"></i> Clock In</button>
+                        <button class="btn btn-primary" onclick="logAttendance('Break Out')"><i data-lucide="coffee"></i> Break Out</button>
+                        <button class="btn btn-secondary" onclick="logAttendance('Break In')" style="background:#6366f1; color:white;"><i data-lucide="play"></i> Break In</button>
+                        <button class="btn btn-danger" onclick="logAttendance('Clock Out')"><i data-lucide="log-out"></i> Clock Out</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <h2 style="margin: 0;">Attendance Summary</h2>
+                    <div class="btn-group">
+                        <button class="btn btn-success btn-sm" onclick="exportToCSV()"><i data-lucide="download"></i> Export CSV</button>
+                        <button class="btn btn-danger btn-sm" onclick="clearLogs()"><i data-lucide="trash-2"></i> Clear All</button>
+                    </div>
+                </div>
+
+                <div class="sub-nav" style="margin-top: 0.5rem;">
+                    <button onclick="setShiftTab('All')" id="tab-All" class="active">All</button>
+                    <button onclick="setShiftTab('1st Shift')" id="tab-1st">1st Shift</button>
+                    <button onclick="setShiftTab('2nd Shift')" id="tab-2nd">2nd Shift</button>
+                    <button onclick="setShiftTab('3rd Shift')" id="tab-3rd">3rd Shift</button>
+                    <button onclick="setShiftTab('History')" id="tab-History">History (Clocked Out)</button>
+                </div>
+                <div class="table-wrapper">
+                    <table id="log-table">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>ID</th>
+                                <th>Name</th>
+                                <th>Shift</th>
+                                <th>Clock In</th>
+                                <th>Break Out</th>
+                                <th>Break In</th>
+                                <th>Clock Out</th>
+                                <th class="text-center">Controls</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+                <div class="pagination">
+                    <button class="btn btn-primary btn-sm" id="log-prev" onclick="changeLogPage(-1)">Previous</button>
+                    <div id="page-info" style="font-weight: 600;">Page 1 of 1</div>
+                    <button class="btn btn-primary btn-sm" id="log-next" onclick="changeLogPage(1)">Next</button>
+                    <span id="log-total" style="color: var(--secondary); margin-left: auto;">Total: 0 records</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Data View -->
+    <div id="view-data" class="view">
+        <div class="card">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                <h2>Validation Data Log</h2>
+                <div style="position: relative; flex: 1; max-width: 400px; margin: 0 2rem;">
+                    <input type="text" id="data-search" placeholder="Search Order, SKU, Description..." style="padding: 0.4rem 0.4rem 0.4rem 2rem;" oninput="handleDataSearch(this.value)">
+                    <i data-lucide="search" style="position: absolute; left: 8px; top: 50%; transform: translateY(-50%); width: 14px; color: var(--secondary);"></i>
+                </div>
+                <div class="btn-group">
+                    <button class="btn btn-secondary btn-sm" onclick="downloadSampleCSV()"><i data-lucide="file-text"></i> Sample CSV</button>
+                    <button class="btn btn-secondary btn-sm" onclick="triggerImport()"><i data-lucide="upload"></i> Import CSV</button>
+                    <button class="btn btn-secondary btn-sm" onclick="toggleRemarksModal(true)"><i data-lucide="list-checks"></i> Remarks Manager</button>
+                    <button class="btn btn-primary btn-sm" onclick="openBulkUpdate()"><i data-lucide="edit-3"></i> Bulk Update</button>
+                    <button class="btn btn-danger btn-sm" onclick="bulkDeleteValidation()"><i data-lucide="trash-2"></i> Delete Selected</button>
+                    <button class="btn btn-success btn-sm" onclick="exportValidationToCSV()"><i data-lucide="download"></i> Export CSV</button>
+                </div>
+                <input type="file" id="import-input" style="display: none;" accept=".csv" onchange="handleImport(event)">
+            </div>
+            <div class="table-wrapper">
+                <table id="validation-table">
+                    <thead>
+                        <tr>
+                            <th><input type="checkbox" id="select-all-val" onclick="toggleAllValidation(this)"></th>
+                            <th>Date Input</th>
+                            <th>Time Input</th>
+                            <th>Order Date</th>
+                            <th>Order Number</th>
+                            <th>Platform</th>
+                            <th>Sku</th>
+                            <th>Description</th>
+                            <th>Order Qty</th>
+                            <th>Rejected Qty</th>
+                            <th>Replen Remarks</th>
+                            <th>IC Status</th>
+                            <th>Time IC Status</th>
+                            <th>IC Remarks</th>
+                            <th>Time IC Remarks</th>
+                            <th>Input Duration</th>
+                            <th>Validation Duration</th>
+                            <th>Validated by (IC Validator)</th>
+                            <th>Final Disposition</th>
+                            <th class="text-center">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+            <div class="pagination" id="data-pagination"></div>
+        </div>
+    </div>
+</div>
+
+<footer>
+    <p>&copy; 2026 PRO-Validation Solutions. All Rights Reserved.</p>
+    <p>System Version 1 | IndexedDB Mode</p>
+</footer>
+
+<!-- Modal for User Master -->
+<div id="user-modal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2 style="margin:0">User ID Master</h2>
+            <button onclick="toggleModal(false)" style="cursor:pointer; border:none; background:none; font-size:1.5rem">&times;</button>
+        </div>
+        <div class="grid" style="grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.5rem;">
+            <div class="form-group" style="margin-bottom: 0;">
+                <label>User ID</label>
+                <input type="text" id="master-id" placeholder="Ex: 1001">
+            </div>
+            <div class="form-group" style="margin-bottom: 0;">
+                <label>Full Name</label>
+                <input type="text" id="master-name" placeholder="John Doe">
+            </div>
+            <button class="btn btn-primary" style="grid-column: span 2;" onclick="registerUser()"><i data-lucide="plus-circle"></i> Add New User</button>
+        </div>
+        
+        <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid #eee; padding-top: 1rem;">
+            <h3 style="margin: 0;">Registered Users</h3>
+            <div style="position: relative;">
+                <input type="text" id="user-search" placeholder="Search..." style="width: 200px; padding: 0.4rem 0.4rem 0.4rem 2rem;" oninput="handleUserSearch(this.value)">
+                <i data-lucide="search" style="position: absolute; left: 8px; top: 50%; transform: translateY(-50%); width: 14px; color: var(--secondary);"></i>
+            </div>
+        </div>
+
+        <div style="max-height: 300px; overflow-y: auto;">
+            <table id="user-table">
+                <thead><tr><th>ID</th><th>Name</th><th class="text-center">Action</th></tr></thead>
+                <tbody></tbody>
+            </table>
+        </div>
+        <div class="pagination" style="margin-top: 1rem;">
+            <button class="btn btn-primary btn-sm" id="user-prev" onclick="changeUserPage(-1)">Prev</button>
+            <span id="user-page-info" style="font-weight: 600;">Page 1</span>
+            <button class="btn btn-primary btn-sm" id="user-next" onclick="changeUserPage(1)">Next</button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal for Data Entry -->
+<div id="data-modal" class="modal">
+    <div class="modal-content" style="max-width: 900px;">
+        <div class="modal-header">
+            <h2 style="margin:0" id="data-modal-title">Add Validation Entry</h2>
+            <button onclick="toggleDataModal(false)" style="cursor:pointer; border:none; background:none; font-size:1.5rem">&times;</button>
+        </div>
+        <div class="grid" style="grid-template-columns: repeat(4, 1fr); gap: 1rem;">
+            <div class="form-group"><label>Date Input</label><input type="date" id="data-dateInput"></div>
+            <div class="form-group"><label>Time Input</label><input type="time" id="data-timeInput"></div>
+            <div class="form-group"><label>Order Date</label><input type="date" id="data-orderDate"></div>
+            <div class="form-group"><label>Order Number</label><input type="text" id="data-orderNum"></div>
+            <div class="form-group"><label>Platform</label><input type="text" id="data-platform"></div>
+            <div class="form-group"><label>Sku</label><input type="text" id="data-sku"></div>
+            <div class="form-group"><label>Description</label><input type="text" id="data-desc"></div>
+            <div class="form-group"><label>Order Qty</label><input type="number" id="data-orderQty"></div>
+            <div class="form-group"><label>Rejected Qty</label><input type="number" id="data-rejQty"></div>
+            <div class="form-group"><label>Replen Remarks</label><input type="text" id="data-replenRem"></div>
+            <div class="form-group"><label>IC Status</label><input type="text" id="data-icStatus"></div>
+            <div class="form-group"><label>Time IC Status</label><input type="time" id="data-timeICStatus"></div>
+            <div class="form-group"><label>IC Remarks</label><input type="text" id="data-icRem" list="ic-remarks-list"></div>
+            <div class="form-group"><label>Time IC Remarks</label><input type="time" id="data-timeICRem"></div>
+            <div class="form-group"><label>Validated By</label><select id="data-validator"></select></div>
+            <div class="form-group" style="grid-column: span 2;"><label>Final Disposition</label><input type="text" id="data-disposition" list="dispo-remarks-list"></div>
+        </div>
+        <button class="btn btn-primary" id="data-modal-save-btn" style="width: 100%; margin-top: 1.5rem;" onclick="addValidationEntry()"><i data-lucide="save"></i> Save Entry</button>
+    </div>
+</div>
+
+<!-- Modal for Completion Details -->
+<div id="completion-modal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2 style="margin:0">Complete Validation</h2>
+            <button onclick="toggleCompletionModal(false)" style="cursor:pointer; border:none; background:none; font-size:1.5rem">&times;</button>
+        </div>
+        <div class="form-group">
+            <label>IC Remarks</label>
+            <input type="text" id="comp-remarks" list="ic-remarks-list" placeholder="Enter specific findings...">
+        </div>
+        <div class="form-group">
+            <label>Final Disposition</label>
+            <input type="text" id="comp-disposition" list="dispo-remarks-list" placeholder="Enter final decision...">
+        </div>
+        <div class="form-group">
+            <label>Validated by (IC Validator)</label>
+            <select id="comp-validator"></select>
+        </div>
+        <button class="btn btn-primary" style="width: 100%; margin-top: 1rem;" onclick="saveCompletionDetails()"><i data-lucide="save"></i> Save & Complete</button>
+    </div>
+</div>
+
+<!-- Modal for Validator Assignment -->
+<div id="assignment-modal" class="modal">
+    <div class="modal-content" style="max-width: 400px;">
+        <div class="modal-header">
+            <h2 style="margin:0">Assign Validator</h2>
+            <button onclick="toggleAssignmentModal(false)" style="cursor:pointer; border:none; background:none; font-size:1.5rem">&times;</button>
+        </div>
+        <div class="form-group">
+            <label>Who will validate this order?</label>
+            <select id="assign-validator"></select>
+        </div>
+        <button class="btn btn-primary" style="width: 100%; margin-top: 1rem;" onclick="saveAssignmentDetails()"><i data-lucide="user-check"></i> Start Validation</button>
+    </div>
+</div>
+
+<!-- Modal for Supercode Verification -->
+<div id="supercode-modal" class="modal">
+    <div class="modal-content" style="max-width: 400px;">
+        <div class="modal-header">
+            <h2 style="margin:0">Security Verification</h2>
+            <button onclick="toggleSupercodeModal(false)" style="cursor:pointer; border:none; background:none; font-size:1.5rem">&times;</button>
+        </div>
+        <div class="form-group">
+            <label>Enter Supercode to Clear All Logs</label>
+            <input type="password" id="supercode-input" placeholder="****">
+        </div>
+        <button class="btn btn-danger" style="width: 100%; margin-top: 1rem;" onclick="confirmClearLogs()"><i data-lucide="shield-alert"></i> Confirm Clear All</button>
+    </div>
+</div>
+
+<!-- Modal for Remarks Manager -->
+<div id="remarks-modal" class="modal">
+    <div class="modal-content" style="max-width: 800px;">
+        <div class="modal-header">
+            <h2 style="margin:0">Remarks Manager</h2>
+            <button onclick="toggleRemarksModal(false)" style="cursor:pointer; border:none; background:none; font-size:1.5rem">&times;</button>
+        </div>
+        <div class="grid" style="grid-template-columns: 1fr 1fr; gap: 2rem;">
+            <div>
+                <h3 style="font-size: 1rem; color: var(--secondary);">IC Remarks List</h3>
+                <div class="form-group" style="flex-direction: row; gap: 0.5rem; margin-bottom: 0.5rem;">
+                    <input type="text" id="new-ic-remark" placeholder="New remark...">
+                    <button class="btn btn-primary btn-sm" onclick="addRemark('ic')"><i data-lucide="plus"></i></button>
+                </div>
+                <div style="max-height: 300px; overflow-y: auto; border: 1px solid #eee; border-radius: 4px;">
+                    <table id="ic-remarks-table">
+                        <tbody style="white-space: normal;"></tbody>
+                    </table>
+                </div>
+            </div>
+            <div>
+                <h3 style="font-size: 1rem; color: var(--secondary);">Final Disposition List</h3>
+                <div class="form-group" style="flex-direction: row; gap: 0.5rem; margin-bottom: 0.5rem;">
+                    <input type="text" id="new-dispo-remark" placeholder="New disposition...">
+                    <button class="btn btn-primary btn-sm" onclick="addRemark('dispo')"><i data-lucide="plus"></i></button>
+                </div>
+                <div style="max-height: 300px; overflow-y: auto; border: 1px solid #eee; border-radius: 4px;">
+                    <table id="dispo-remarks-table">
+                        <tbody style="white-space: normal;"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal for Bulk Update -->
+<div id="bulk-update-modal" class="modal">
+    <div class="modal-content" style="max-width: 500px;">
+        <div class="modal-header">
+            <h2 style="margin:0">Bulk Update Selected</h2>
+            <button onclick="toggleBulkUpdateModal(false)" style="cursor:pointer; border:none; background:none; font-size:1.5rem">&times;</button>
+        </div>
+        <p id="bulk-update-count" style="font-size: 0.9rem; color: var(--secondary); margin-bottom: 1rem;"></p>
+        <div class="form-group">
+            <label>Target SKU (Optional)</label>
+            <input type="text" id="bulk-target-sku" placeholder="Enter SKU to update all matches">
+        </div>
+        <div class="form-group">
+            <label>Update IC Status</label>
+            <select id="bulk-icStatus">
+                <option value="">Keep Original</option>
+                <option value="Pending">Pending</option>
+                <option value="On-going">On-going</option>
+                <option value="Completed">Completed</option>
+            </select>
+        </div>
+        <div class="form-group"><label>Update IC Remarks</label><input type="text" id="bulk-icRem" list="ic-remarks-list" placeholder="Leave blank to keep original"></div>
+        <div class="form-group"><label>Update Final Disposition</label><input type="text" id="bulk-disposition" list="dispo-remarks-list" placeholder="Leave blank to keep original"></div>
+        <div class="form-group">
+            <label>Update Validator</label>
+            <select id="bulk-validator"></select>
+        </div>
+        <p style="font-size: 0.75rem; color: var(--danger);">* Note: Times will be updated to the current time if status is changed.</p>
+        <button class="btn btn-primary" style="width: 100%; margin-top: 1rem;" onclick="applyBulkUpdate()"><i data-lucide="check-square"></i> Apply Changes</button>
+    </div>
+</div>
+
+<!-- Modal for Image Zoom -->
+<div id="image-zoom-modal" class="modal" onclick="this.style.display='none'" style="background: rgba(0,0,0,0.9);">
+    <div style="height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative;">
+        <span style="position: absolute; top: 20px; right: 20px; color: white; font-size: 2.5rem; cursor: pointer;">&times;</span>
+        <img id="zoomed-image" src="" style="max-width: 90%; max-height: 80%; border-radius: 8px; box-shadow: 0 0 20px rgba(0,0,0,0.5); background: white; padding: 10px;">
+        <h3 id="zoom-sku-label" style="color: white; margin-top: 1rem; font-family: inherit;"></h3>
+    </div>
+</div>
+
+<script>
+    // State Management
+    let users = [];
+    let logs = [];
+    let validationData = [];
+    let icRemarksMaster = [];
+    let dispoRemarksMaster = [];
+
+    // IndexedDB Utility
+    const db = {
+        name: 'PROValidationDB',
+        version: 1,
+        instance: null,
+        init() {
+            return new Promise((resolve, reject) => {
+                const request = indexedDB.open(this.name, this.version);
+                request.onupgradeneeded = (e) => {
+                    const database = e.target.result;
+                    if (!database.objectStoreNames.contains('settings')) {
+                        database.createObjectStore('settings');
+                    }
+                };
+                request.onsuccess = (e) => {
+                    this.instance = e.target.result;
+                    resolve();
+                };
+                request.onerror = (e) => reject(e.target.error);
+            });
+        },
+        get(key, defaultValue) {
+            const transaction = this.instance.transaction(['settings'], 'readonly');
+            const store = transaction.objectStore('settings');
+            const request = store.get(key);
+            return new Promise((resolve) => {
+                request.onsuccess = () => resolve(request.result !== undefined ? request.result : defaultValue);
+                request.onerror = () => resolve(defaultValue);
+            });
+        },
+        set(key, value) {
+            const transaction = this.instance.transaction(['settings'], 'readwrite');
+            const store = transaction.objectStore('settings');
+            const request = store.put(value, key);
+            return new Promise((resolve, reject) => {
+                request.onsuccess = () => resolve();
+                request.onerror = (e) => reject(e.target.error);
+            });
+        }
+    };
+    
+    // Alert State
+    let alertedHighAgingIds = new Set();
+    const alertSound = new Audio('https://actions.google.com/sounds/v1/alarms/beep_short.ogg');
+
+    // Pagination State
+    let currentPage = 1;
+    let userCurrentPage = 1;
+    let dataCurrentPage = 1;
+    let editValidationId = null;
+    let dataSearchTerm = '';
+    let dashboardSearchTerm = '';
+    let userSearchTerm = '';
+    let currentCompletionId = null;
+    let currentAssignmentId = null;
+    let supercodeAction = ''; // Track what the supercode is for
+    let selectedValidationIds = [];
+    let activeShiftTab = 'All';
+    let activeDashboardTab = 'On-going';
+    const rowsPerPage = 10;
+    const usersPerPage = 5;
+    const dataRowsPerPage = 15;
+
+    // Toast System
+    function showToast(message, type = 'success') {
+        const container = document.getElementById('toast-container');
+        const toast = document.createElement('div');
+        let icon = 'check-circle';
+        if(type === 'danger') icon = 'alert-circle';
+        if(type === 'info') icon = 'info';
+        
+        toast.className = `toast toast-${type}`;
+        toast.innerHTML = `<i data-lucide="${icon}"></i> ${message}`;
+        container.appendChild(toast);
+        lucide.createIcons();
+        
+        setTimeout(() => {
+            toast.style.opacity = '0';
+            toast.style.transform = 'translateX(100%)';
+            toast.style.transition = 'all 0.3s ease-in';
+            setTimeout(() => {
+                container.removeChild(toast);
+            }, 300);
+        }, 3000);
+    }
+
+    // Helper to normalize dates to YYYY-MM-DD for reliable filtering
+    function normalizeDate(dateStr) {
+        if (!dateStr) return '';
+        // Take only the date part in case there's a timestamp, then trim
+        let clean = dateStr.toString().split(' ')[0].trim().replace(/['"]/g, '');
+        if (clean === '-' || clean === '') return '';
+        
+        // If already YYYY-MM-DD, return as is
+        if (/^\d{4}-\d{2}-\d{2}$/.test(clean)) return clean;
+        
+        const parts = clean.split(/[\/\-\.]/);
+        if (parts.length === 3) {
+            let year, month, day;
+            const p0 = parts[0].trim();
+            const p1 = parts[1].trim();
+            const p2 = parts[2].trim();
+
+            if (p2.length === 4) { // Format: XX/XX/YYYY
+                year = p2;
+                // Guessing Month vs Day: If first part > 12, it must be Day (DD/MM/YYYY)
+                if (parseInt(p0) > 12) {
+                    day = p0; month = p1;
+                } else {
+                    month = p0; day = p1;
+                }
+            } else if (p0.length === 4) { // Format: YYYY/XX/XX
+                year = p0; month = p1; day = p2;
+            } else if (p2.length === 2) { // Format: XX/XX/YY
+                year = (parseInt(p2) > 50 ? "19" : "20") + p2;
+                if (parseInt(p0) > 12) { day = p0; month = p1; }
+                else { month = p0; day = p1; }
+            }
+            if (year && month && day) return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+        }
+        return clean;
+    }
+
+    // Helper for time calculation
+    function calculateDurationMinutes(startTime, endTime) {
+        if (!startTime || !endTime) return null;
+        const start = new Date(`1970-01-01T${startTime}:00`);
+        const end = new Date(`1970-01-01T${endTime}:00`);
+        if (isNaN(start) || isNaN(end)) return null;
+        
+        let diff = (end - start) / 1000 / 60; // in minutes
+        if (diff < 0) diff += 1440; // handle midnight wrap
+        return diff;
+    }
+
+    // Realtime Clock
+    function updateClock() {
+        const now = new Date();
+        document.getElementById('clock-date').innerText = now.toLocaleDateString('en-US', { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' });
+        document.getElementById('clock-time').innerText = now.toLocaleTimeString();
+    }
+    setInterval(updateClock, 1000);
+    updateClock();
+
+    // Global Filtering Logic
+    function refreshAllViews() {
+        currentPage = 1;
+        dataCurrentPage = 1;
+        updateDashboard();
+        renderLogs();
+        renderValidationTable();
+    }
+
+    function setDefaultGlobalDates() {
+        const today = new Date();
+        const tomorrow = new Date();
+        tomorrow.setDate(today.getDate() + 1);
+        
+        const formatDate = (date) => {
+            const y = date.getFullYear();
+            const m = String(date.getMonth() + 1).padStart(2, '0');
+            const d = String(date.getDate()).padStart(2, '0');
+            return `${y}-${m}-${d}`;
+        };
+
+        document.getElementById('global-start').value = formatDate(today);
+        document.getElementById('global-end').value = formatDate(tomorrow);
+    }
+
+    function resetGlobalFilter() {
+        setDefaultGlobalDates();
+        refreshAllViews();
+    }
+
+    function clearGlobalFilter() {
+        document.getElementById('global-start').value = '';
+        document.getElementById('global-end').value = '';
+        refreshAllViews();
+    }
+
+    // Modal Logic
+    function toggleModal(show) {
+        document.getElementById('user-modal').style.display = show ? 'block' : 'none';
+        if(show) renderUserTable();
+    }
+
+    function toggleDataModal(show) {
+        document.getElementById('data-modal').style.display = show ? 'block' : 'none';
+        if (show) {
+            populateOnDutyDropdown('data-validator');
+        } else {
+            editValidationId = null;
+            document.getElementById('data-modal-title').innerText = "Add Validation Entry";
+            document.getElementById('data-modal-save-btn').innerHTML = '<i data-lucide="save"></i> Save Entry';
+            document.querySelectorAll('#data-modal input').forEach(i => i.value = '');
+        }
+    }
+
+    function toggleCompletionModal(show) {
+        document.getElementById('completion-modal').style.display = show ? 'block' : 'none';
+        if (!show) {
+            currentCompletionId = null;
+            renderValidationTable(); // Reset dropdown if cancelled
+        } else {
+            populateOnDutyDropdown('comp-validator');
+            const item = validationData.find(d => d.id === currentCompletionId);
+            if (item && item.validator) {
+                document.getElementById('comp-validator').value = item.validator;
+            }
+        }
+    }
+
+    function toggleAssignmentModal(show) {
+        document.getElementById('assignment-modal').style.display = show ? 'block' : 'none';
+        if (!show) {
+            currentAssignmentId = null;
+            renderValidationTable(); // Reset dropdown if cancelled
+        } else {
+            populateOnDutyDropdown('assign-validator');
+        }
+    }
+
+    function populateOnDutyDropdown(elementId) {
+        const select = document.getElementById(elementId);
+        if (!select) return;
+
+        const onDuty = getOnDutyUsersList();
+        if (onDuty.length === 0) {
+            select.innerHTML = '<option value="">No users on duty</option>';
+        } else {
+            select.innerHTML = '<option value="">Select Validator...</option>' + 
+                onDuty.map(u => `<option value="${u.name}">${u.name} (${u.id})</option>`).join('');
+        }
+    }
+
+    function getOnDutyUsersList() {
+        const stats = getAttendanceStats(); // Uses current logic for "Present"
+        // We need the actual user objects, so we'll re-run the "not clocked out" logic
+        return getOnDutyUsers(); 
+    }
+
+    function toggleSupercodeModal(show) {
+        document.getElementById('supercode-modal').style.display = show ? 'block' : 'none';
+        if (show) {
+            document.getElementById('supercode-input').value = '';
+        }
+    }
+
+    function toggleRemarksModal(show) {
+        document.getElementById('remarks-modal').style.display = show ? 'block' : 'none';
+        if(show) renderRemarksTables();
+    }
+
+    function renderRemarksTables() {
+        const icTbody = document.querySelector('#ic-remarks-table tbody');
+        const dispoTbody = document.querySelector('#dispo-remarks-table tbody');
+        
+        icTbody.innerHTML = icRemarksMaster.map((r, i) => `
+            <tr>
+                <td style="width: 100%">${r}</td>
+                <td><button class="btn btn-danger btn-sm" style="padding: 2px 5px" onclick="deleteRemark('ic', ${i})"><i data-lucide="trash-2"></i></button></td>
+            </tr>
+        `).join('');
+        
+        dispoTbody.innerHTML = dispoRemarksMaster.map((r, i) => `
+            <tr>
+                <td style="width: 100%">${r}</td>
+                <td><button class="btn btn-danger btn-sm" style="padding: 2px 5px" onclick="deleteRemark('dispo', ${i})"><i data-lucide="trash-2"></i></button></td>
+            </tr>
+        `).join('');
+        
+        lucide.createIcons();
+        updateDatalists();
+    }
+
+    async function addRemark(type) {
+        const inputId = type === 'ic' ? 'new-ic-remark' : 'new-dispo-remark';
+        const input = document.getElementById(inputId);
+        const val = input.value.trim();
+        if(!val) return;
+        
+        if(type === 'ic') icRemarksMaster.push(val);
+        else dispoRemarksMaster.push(val);
+        
+        await saveRemarks();
+        input.value = '';
+        renderRemarksTables();
+    }
+
+    async function deleteRemark(type, index) {
+        if(type === 'ic') icRemarksMaster.splice(index, 1);
+        else dispoRemarksMaster.splice(index, 1);
+        await saveRemarks();
+        renderRemarksTables();
+    }
+
+    async function saveRemarks() {
+        await db.set('icRemarksMaster', icRemarksMaster);
+        await db.set('dispoRemarksMaster', dispoRemarksMaster);
+    }
+
+    function updateDatalists() {
+        document.getElementById('ic-remarks-list').innerHTML = icRemarksMaster.map(r => `<option value="${r}">`).join('');
+        document.getElementById('dispo-remarks-list').innerHTML = dispoRemarksMaster.map(r => `<option value="${r}">`).join('');
+    }
+
+    // Dashboard Tab Logic
+    function setDashboardTab(tab) {
+        activeDashboardTab = tab;
+        document.querySelectorAll('#view-dashboard .sub-nav button').forEach(btn => {
+            btn.classList.remove('active');
+        });
+        const btnId = `dash-tab-${tab.replace('-', '')}`;
+        document.getElementById(btnId).classList.add('active');
+        updateDashboard();
+    }
+
+    function handleDashboardSearch(val) {
+        dashboardSearchTerm = val;
+        updateDashboard();
+    }
+
+    // Shift Tab Logic
+    function setShiftTab(shift) {
+        activeShiftTab = shift;
+        document.querySelectorAll('.sub-nav button').forEach(btn => {
+            btn.classList.remove('active');
+        });
+        // Handle ID mapping for buttons
+        const btnId = shift === '1st Shift' ? 'tab-1st' : shift === '2nd Shift' ? 'tab-2nd' : shift === '3rd Shift' ? 'tab-3rd' : shift === 'History' ? 'tab-History' : 'tab-All';
+        document.getElementById(btnId).classList.add('active');
+        currentPage = 1;
+        renderLogs();
+    }
+
+    // Navigation Logic
+    function showView(viewId) {
+        document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+        document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
+        
+        document.getElementById(`view-${viewId}`).classList.add('active');
+        document.getElementById(`nav-${viewId}`).classList.add('active');
+        
+        if(viewId === 'dashboard') updateDashboard();
+        if(viewId === 'attendance') {
+            renderUserTable();
+            // Set default shift in dropdown
+            const shiftSelect = document.getElementById('shift-select');
+            if(shiftSelect) shiftSelect.value = getShift(new Date());
+            
+            renderLogs();
+            updateAttendanceStats();
+        }
+        if(viewId === 'data') {
+            renderValidationTable();
+        }
+    }
+
+    // Shift Logic: 
+    // 1st Shift: 06:00 - 13:59
+    // 2nd Shift: 14:00 - 21:59
+    // 3rd Shift: 22:00 - 05:59
+    function getShift(date) {
+        const hour = date.getHours();
+        if (hour >= 6 && hour < 14) return "1st Shift";
+        if (hour >= 14 && hour < 22) return "2nd Shift";
+        return "3rd Shift";
+    }
+
+    // User Master Logic
+    async function registerUser() {
+        const id = document.getElementById('master-id').value.trim();
+        const name = document.getElementById('master-name').value.trim();
+
+        if (!id || !name) return alert("Please fill ID and Name");
+        if (users.find(u => u.id === id)) return alert("User ID already exists");
+
+        users.push({ id, name });
+        await db.set('users', users);
+        
+        showToast(`User ${name} registered successfully.`);
+        document.getElementById('master-id').value = '';
+        document.getElementById('master-name').value = '';
+        renderUserTable();
+        updateDashboard();
+    }
+
+    function renderUserTable() {
+        const tbody = document.querySelector('#user-table tbody');
+        if (!tbody) return;
+
+        const filteredUsers = users.filter(u => 
+            u.name.toLowerCase().includes(userSearchTerm.toLowerCase()) || 
+            u.id.toLowerCase().includes(userSearchTerm.toLowerCase())
+        );
+
+        const totalPages = Math.ceil(filteredUsers.length / usersPerPage) || 1;
+        if (userCurrentPage > totalPages) userCurrentPage = totalPages;
+        if (userCurrentPage < 1) userCurrentPage = 1;
+
+        const start = (userCurrentPage - 1) * usersPerPage;
+        const pagedUsers = filteredUsers.slice(start, start + usersPerPage);
+
+        document.getElementById('user-page-info').innerText = `Page ${userCurrentPage} of ${totalPages}`;
+        document.getElementById('user-prev').disabled = userCurrentPage === 1;
+        document.getElementById('user-next').disabled = userCurrentPage === totalPages;
+
+        tbody.innerHTML = pagedUsers.map(u => `
+            <tr>
+                <td>${u.id}</td>
+                <td>${u.name}</td>
+                <td class="text-center">
+                    <button class="btn btn-danger btn-sm" onclick="deleteUser('${u.id}')"><i data-lucide="trash"></i></button>
+                </td>
+            </tr>`).join('');
+        lucide.createIcons();
+    }
+
+    function handleUserSearch(val) {
+        userSearchTerm = val;
+        userCurrentPage = 1;
+        renderUserTable();
+    }
+
+    async function deleteUser(id) {
+        if (confirm(`Delete user ${id}? Historical logs will remain.`)) {
+            users = users.filter(u => u.id !== id);
+            await db.set('users', users);
+            renderUserTable();
+            updateDashboard();
+            showToast("User removed from Master list.");
+        }
+    }
+
+    // Validation Data Logic
+    async function addValidationEntry() {
+        const entry = {
+            id: editValidationId || Date.now(),
+            dateInput: document.getElementById('data-dateInput').value,
+            timeInput: document.getElementById('data-timeInput').value,
+            orderDate: document.getElementById('data-orderDate').value,
+            orderNum: document.getElementById('data-orderNum').value,
+            platform: document.getElementById('data-platform').value,
+            sku: document.getElementById('data-sku').value,
+            desc: document.getElementById('data-desc').value,
+            orderQty: document.getElementById('data-orderQty').value,
+            rejQty: document.getElementById('data-rejQty').value,
+            replenRem: document.getElementById('data-replenRem').value,
+            icStatus: document.getElementById('data-icStatus').value,
+            timeICStatus: document.getElementById('data-timeICStatus').value,
+            icRem: document.getElementById('data-icRem').value,
+            timeICRem: document.getElementById('data-timeICRem').value,
+            validator: document.getElementById('data-validator').value,
+            disposition: document.getElementById('data-disposition').value
+        };
+
+        if(!entry.dateInput || !entry.orderNum) {
+            showToast("Date Input and Order Number are required.", "danger");
+            return;
+        }
+
+        // Prevent duplicate Order Number + SKU combinations
+        const isDuplicate = validationData.some(d => d.id !== entry.id && 
+            d.orderNum?.trim() === entry.orderNum?.trim() && 
+            d.sku?.trim() === entry.sku?.trim());
+        
+        if (isDuplicate) {
+            showToast(`Duplicate: Order #${entry.orderNum} with SKU ${entry.sku} already exists.`, "danger");
+            return;
+        }
+
+        if (editValidationId) {
+            const index = validationData.findIndex(d => d.id === editValidationId);
+            if (index !== -1) {
+                validationData[index] = entry;
+                showToast("Validation entry updated.");
+            }
+        } else {
+            validationData.push(entry);
+            showToast("New validation entry saved.");
+        }
+
+        await db.set('validationData', validationData);
+        toggleDataModal(false);
+        
+        // Reset fields
+        document.querySelectorAll('#data-modal input').forEach(i => i.value = '');
+        
+        renderValidationTable();
+    }
+
+    function renderValidationTable() {
+        const tbody = document.querySelector('#validation-table tbody');
+        if (!tbody) return;
+
+        let filteredData = [...validationData];
+
+        // Global Date Filter
+        const globalStart = document.getElementById('global-start').value;
+        const globalEnd = document.getElementById('global-end').value;
+
+        if (globalStart || globalEnd) {
+            filteredData = filteredData.filter(d => {
+                const entryDate = normalizeDate(d.dateInput);
+                if (!entryDate) return false;
+                if (globalStart && entryDate < globalStart) return false;
+                if (globalEnd && entryDate > globalEnd) return false;
+                return true;
+            });
+        }
+
+        // Search Filter
+        if (dataSearchTerm) {
+            const term = dataSearchTerm.toLowerCase();
+            filteredData = filteredData.filter(d => 
+                (d.orderNum && d.orderNum.toLowerCase().includes(term)) ||
+                (d.sku && d.sku.toLowerCase().includes(term)) ||
+                (d.desc && d.desc.toLowerCase().includes(term))
+            );
+        }
+
+        if (validationData.length > 0 && filteredData.length === 0 && (globalStart || globalEnd)) {
+            tbody.innerHTML = `<tr><td colspan="20" style="text-align:center; padding: 3rem; color: var(--secondary);">
+                <i data-lucide="filter-x" style="width:48px; height:48px; margin-bottom:1rem; opacity:0.5;"></i><br>
+                <strong>Data is hidden by the Date Filter.</strong><br>
+                There are ${validationData.length} total records, but none match the range ${globalStart} to ${globalEnd}.<br>
+                <button class="btn btn-secondary btn-sm" style="margin-top:1rem" onclick="clearGlobalFilter()">Show All Records</button></td></tr>`;
+            lucide.createIcons();
+            return;
+        }
+
+        if (filteredData.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="20" style="text-align:center; padding: 2rem; color: var(--secondary);">
+                <i data-lucide="database-zap"></i> No validation records found. Click "Import CSV" to add data.</td></tr>`;
+            lucide.createIcons();
+            return;
+        }
+
+        const totalPages = Math.ceil(filteredData.length / dataRowsPerPage) || 1;
+        if (dataCurrentPage > totalPages) dataCurrentPage = totalPages;
+        if (dataCurrentPage < 1) dataCurrentPage = 1;
+
+        const start = (dataCurrentPage - 1) * dataRowsPerPage;
+        const pagedData = filteredData.reverse().slice(start, start + dataRowsPerPage);
+
+        tbody.innerHTML = pagedData.map((d) => {
+            let inputDurStr = '-';
+            let valDurStr = '-';
+            
+            // Calculate Input Duration (Time Input vs Time IC Status)
+            const diffInput = calculateDurationMinutes(d.timeInput, d.timeICStatus);
+            if (diffInput !== null) {
+                inputDurStr = `${Math.floor(diffInput / 60)}h ${Math.floor(diffInput % 60)}m`;
+            }
+
+            // Calculate Validation Duration (Time IC Status vs Time IC Remarks)
+            let endTime = d.timeICRem;
+            if (d.icStatus === 'On-going') {
+                const now = new Date();
+                endTime = now.getHours().toString().padStart(2, '0') + ':' + now.getMinutes().toString().padStart(2, '0');
+            }
+
+            const diffVal = calculateDurationMinutes(d.timeICStatus, endTime);
+            if (diffVal !== null) {
+                const h = Math.floor(diffVal / 60);
+                const m = Math.floor(diffVal % 60);
+                valDurStr = `${h}h ${m}m${d.icStatus === 'On-going' ? ' ⏱️' : ''}`;
+            }
+
+            return `
+                <tr>
+                    <td><input type="checkbox" class="val-checkbox" data-id="${d.id}"></td>
+                    <td>${d.dateInput || '-'}</td>
+                    <td>${d.timeInput || '-'}</td>
+                    <td>${d.orderDate || '-'}</td>
+                    <td>${d.orderNum || '-'}</td>
+                    <td>${d.platform || '-'}</td>
+                    <td>${d.sku || '-'}</td>
+                    <td>${d.desc || '-'}</td>
+                    <td>${d.orderQty || '0'}</td>
+                    <td>${d.rejQty || '0'}</td>
+                    <td>${d.replenRem || '-'}</td>
+                <td>
+                    <select onchange="updateICStatus(${d.id}, this.value)" style="padding: 2px 4px; font-size: 0.75rem; border: 1px solid #cbd5e1; border-radius: 4px; cursor: pointer;">
+                        <option value="Pending" ${d.icStatus === 'Pending' ? 'selected' : ''}>Pending</option>
+                        <option value="On-going" ${d.icStatus === 'On-going' ? 'selected' : ''}>On-going</option>
+                        <option value="Completed" ${d.icStatus === 'Completed' ? 'selected' : ''}>Completed</option>
+                        ${!['Pending', 'On-going', 'Completed'].includes(d.icStatus) && d.icStatus ? `<option value="${d.icStatus}" selected>${d.icStatus}</option>` : ''}
+                    </select>
+                </td>
+                    <td>${d.timeICStatus || '-'}</td>
+                    <td>
+                        ${d.icStatus === 'Completed' ? 
+                            `<input type="text" value="${d.icRem || ''}" 
+                                    onchange="updateICRemarks(${d.id}, this.value)" 
+                                    list="ic-remarks-list"
+                                    placeholder="Edit remarks..." 
+                                    style="padding: 2px 4px; font-size: 0.75rem; border: 1px solid #cbd5e1; border-radius: 4px; width: 120px;">` : 
+                            d.icRem || '-'
+                        }
+                    </td>
+                    <td>${d.timeICRem || '-'}</td>
+                    <td>${inputDurStr}</td>
+                    <td><strong>${valDurStr}</strong></td>
+                    <td>${d.validator || '-'}</td>
+                    <td>${d.disposition || '-'}</td>
+                    <td class="text-center">
+                        <button class="btn btn-primary btn-sm" onclick="editValidationEntry(${d.id})"><i data-lucide="edit"></i></button>
+                        <button class="btn btn-danger btn-sm" onclick="deleteValidationEntry(${d.id})"><i data-lucide="trash-2"></i></button>
+                    </td>
+                </tr>
+            `;
+        }).join('');
+
+        renderDataPagination(totalPages);
+        lucide.createIcons();
+    }
+
+    function editValidationEntry(id) {
+        const item = validationData.find(d => d.id === id);
+        if (!item) return;
+
+        editValidationId = id;
+        document.getElementById('data-modal-title').innerText = "Edit Validation Entry";
+        document.getElementById('data-modal-save-btn').innerHTML = '<i data-lucide="save"></i> Update Entry';
+
+        // Populate modal fields
+        document.getElementById('data-dateInput').value = item.dateInput || '';
+        document.getElementById('data-timeInput').value = item.timeInput || '';
+        document.getElementById('data-orderDate').value = item.orderDate || '';
+        document.getElementById('data-orderNum').value = item.orderNum || '';
+        document.getElementById('data-platform').value = item.platform || '';
+        document.getElementById('data-sku').value = item.sku || '';
+        document.getElementById('data-desc').value = item.desc || '';
+        document.getElementById('data-orderQty').value = item.orderQty || '';
+        document.getElementById('data-rejQty').value = item.rejQty || '';
+        document.getElementById('data-replenRem').value = item.replenRem || '';
+        document.getElementById('data-icStatus').value = item.icStatus || '';
+        document.getElementById('data-timeICStatus').value = item.timeICStatus || '';
+        document.getElementById('data-icRem').value = item.icRem || '';
+        document.getElementById('data-timeICRem').value = item.timeICRem || '';
+        document.getElementById('data-disposition').value = item.disposition || '';
+
+        toggleDataModal(true);
+        document.getElementById('data-validator').value = item.validator || '';
+        lucide.createIcons();
+    }
+
+    function handleDataSearch(val) {
+        dataSearchTerm = val;
+        dataCurrentPage = 1;
+        renderValidationTable();
+    }
+
+    function toggleAllValidation(source) {
+        const checkboxes = document.querySelectorAll('.val-checkbox');
+        checkboxes.forEach(cb => cb.checked = source.checked);
+    }
+
+    function bulkDeleteValidation() {
+        const checkboxes = document.querySelectorAll('.val-checkbox:checked');
+        selectedValidationIds = Array.from(checkboxes).map(cb => parseInt(cb.getAttribute('data-id')));
+        
+        if (selectedValidationIds.length === 0) {
+            showToast("No entries selected for deletion.", "info");
+            return;
+        }
+        
+        supercodeAction = 'bulk-delete-validation';
+        toggleSupercodeModal(true);
+    }
+
+    function toggleBulkUpdateModal(show) {
+        document.getElementById('bulk-update-modal').style.display = show ? 'block' : 'none';
+    }
+
+    function zoomImage(url, sku) {
+        const modal = document.getElementById('image-zoom-modal');
+        const img = document.getElementById('zoomed-image');
+        const label = document.getElementById('zoom-sku-label');
+        img.src = url;
+        label.innerText = `SKU: ${sku}`;
+        modal.style.display = 'block';
+    }
+
+    function openBulkUpdate() {
+        const checkboxes = document.querySelectorAll('.val-checkbox:checked');
+        selectedValidationIds = Array.from(checkboxes).map(cb => parseInt(cb.getAttribute('data-id')));
+        
+        document.getElementById('bulk-update-count').innerText = selectedValidationIds.length > 0 
+            ? `Updating ${selectedValidationIds.length} selected records` 
+            : "No records selected. Provide a SKU below to target specific items.";
+        
+        // Reset fields for fresh update
+        document.getElementById('bulk-target-sku').value = '';
+        document.getElementById('bulk-icStatus').value = '';
+        document.getElementById('bulk-icRem').value = '';
+        document.getElementById('bulk-disposition').value = '';
+        
+        populateOnDutyDropdown('bulk-validator');
+        toggleBulkUpdateModal(true);
+    }
+
+    async function applyBulkUpdate() {
+        const targetSku = document.getElementById('bulk-target-sku').value.trim();
+        const newStatus = document.getElementById('bulk-icStatus').value;
+        const newRem = document.getElementById('bulk-icRem').value.trim();
+        const newDispo = document.getElementById('bulk-disposition').value.trim();
+        const newValidator = document.getElementById('bulk-validator').value;
+
+        const idsToUpdate = targetSku 
+            ? validationData.filter(d => d.sku === targetSku).map(d => d.id)
+            : selectedValidationIds;
+
+        if (idsToUpdate.length === 0) {
+            showToast("No records found to update. Select rows or enter a valid SKU.", "danger");
+            return;
+        }
+
+        const now = new Date();
+        const timeStr = now.getHours().toString().padStart(2, '0') + ':' + 
+                        now.getMinutes().toString().padStart(2, '0');
+
+        let updatedCount = 0;
+        validationData = validationData.map(item => {
+            if (idsToUpdate.includes(item.id)) {
+                updatedCount++;
+                if (newStatus) {
+                    item.icStatus = newStatus;
+                    if (newStatus === 'On-going') {
+                        item.timeICStatus = timeStr;
+                        if (!item.icRem || item.icRem === 'Pending') item.icRem = 'On-going';
+                    } else if (newStatus === 'Completed') {
+                        if (!item.timeICStatus) item.timeICStatus = timeStr;
+                        item.timeICRem = timeStr;
+                    } else if (newStatus === 'Pending') {
+                        item.timeICStatus = '';
+                        item.timeICRem = '';
+                    }
+                }
+            if (newRem) {
+                item.icRem = newRem;
+                item.timeICRem = timeStr; // Record the time the remark was bulk-updated
+            }
+                if (newDispo) item.disposition = newDispo;
+                if (newValidator) item.validator = newValidator;
+            }
+            return item;
+        });
+
+        await db.set('validationData', validationData);
+        showToast(`Successfully updated ${updatedCount} records.`);
+        toggleBulkUpdateModal(false);
+        document.getElementById('select-all-val').checked = false;
+        selectedValidationIds = [];
+        renderValidationTable();
+        updateDashboard();
+    }
+
+    function renderDataPagination(totalPages) {
+        const container = document.getElementById('data-pagination');
+        if (!container) return;
+        
+        let html = '';
+        for (let i = 1; i <= totalPages; i++) {
+            html += `<button class="btn btn-sm ${i === dataCurrentPage ? 'btn-primary' : 'btn-secondary'}" onclick="changeDataPage(${i})">${i}</button>`;
+        }
+        container.innerHTML = html;
+    }
+
+    function changeDataPage(page) {
+        dataCurrentPage = page;
+        renderValidationTable();
+    }
+
+    async function deleteValidationEntry(id) {
+        if (confirm("Delete this validation entry?")) {
+            validationData = validationData.filter(d => d.id !== id);
+            await db.set('validationData', validationData);
+            renderValidationTable();
+            showToast("Entry deleted.", "danger");
+        }
+    }
+
+    async function updateICStatus(id, newStatus) {
+        const item = validationData.find(d => d.id === id);
+        if (item) {
+            // Logic for IC Remarks and Final Disposition based on Status
+            if (newStatus === 'Pending') {
+                item.icStatus = 'Pending';
+                item.icRem = 'Pending';
+                item.disposition = 'Pending';
+                item.timeICStatus = '';
+                item.timeICRem = '';
+                await db.set('validationData', validationData);
+                showToast(`Status for ${item.orderNum} updated to Pending`);
+                renderValidationTable();
+                updateDashboard();
+            } else if (newStatus === 'On-going') {
+                currentAssignmentId = id;
+                toggleAssignmentModal(true);
+            } else if (newStatus === 'Completed') {
+                currentCompletionId = id;
+                document.getElementById('comp-remarks').value = (item.icRem === 'On-going' || item.icRem === 'Pending' || !item.icRem) ? '' : item.icRem;
+                document.getElementById('comp-disposition').value = item.disposition === 'Pending' ? '' : item.disposition;
+                toggleCompletionModal(true);
+            }
+        }
+    }
+
+    async function saveAssignmentDetails() {
+        const item = validationData.find(d => d.id === currentAssignmentId);
+        const validator = document.getElementById('assign-validator').value;
+
+        if (item && validator) {
+            const now = new Date();
+            const timeStr = now.getHours().toString().padStart(2, '0') + ':' + 
+                            now.getMinutes().toString().padStart(2, '0');
+
+            item.icStatus = 'On-going';
+            item.timeICStatus = timeStr;
+            item.icRem = 'On-going';
+            item.disposition = 'Pending';
+            item.validator = validator;
+
+            await db.set('validationData', validationData);
+            showToast(`Validation started by ${validator} for ${item.orderNum}`);
+            toggleAssignmentModal(false);
+            renderValidationTable();
+            updateDashboard();
+        } else {
+            showToast("Please select a validator to proceed.", "danger");
+        }
+    }
+
+    async function saveCompletionDetails() {
+        const item = validationData.find(d => d.id === currentCompletionId);
+        if (item) {
+            const now = new Date();
+            const timeStr = now.getHours().toString().padStart(2, '0') + ':' + 
+                            now.getMinutes().toString().padStart(2, '0');
+
+            item.icStatus = 'Completed';
+            if (!item.timeICStatus) item.timeICStatus = timeStr; // Fallback if skipped On-going status
+            item.icRem = document.getElementById('comp-remarks').value || 'Completed';
+            item.disposition = document.getElementById('comp-disposition').value || 'Completed';
+            item.validator = document.getElementById('comp-validator').value || item.validator;
+            item.timeICRem = timeStr;
+
+            await db.set('validationData', validationData);
+            showToast(`Validation completed for ${item.orderNum}`);
+            toggleCompletionModal(false);
+            renderValidationTable();
+            updateDashboard();
+        }
+    }
+
+    async function updateICRemarks(id, newRemark) {
+        const item = validationData.find(d => d.id === id);
+        if (item) {
+            item.icRem = newRemark || 'Completed';
+            await db.set('validationData', validationData);
+            showToast(`Remarks updated for ${item.orderNum}`);
+            renderValidationTable();
+        }
+    }
+
+    function triggerImport() {
+        document.getElementById('import-input').click();
+    }
+
+    async function handleImport(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = async function(e) {
+            const text = e.target.result;
+            const lines = text.split(/\r?\n/);
+            if (lines.length < 2) return;
+
+            const newEntries = [];
+            const now = Date.now();
+
+            for (let i = 1; i < lines.length; i++) {
+                if (!lines[i].trim()) continue;
+                
+                const cols = [];
+                let current = '';
+                let inQuotes = false;
+                const line = lines[i];
+                for (let j = 0; j < line.length; j++) {
+                    const char = line[j];
+                    if (char === '"') {
+                        inQuotes = !inQuotes;
+                    } else if (char === ',' && !inQuotes) {
+                        cols.push(current.trim().replace(/^"|"$/g, ''));
+                        current = '';
+                    } else {
+                        current += char;
+                    }
+                }
+                cols.push(current.trim().replace(/^"|"$/g, ''));
+
+                if (cols.length >= 7) { // Minimum required columns to be useful
+                    const orderNum = cols[3];
+                    const sku = cols[5];
+
+                    // Check for duplicates in existing database or current import batch
+                    const exists = validationData.some(d => d.orderNum === orderNum && d.sku === sku) || 
+                                   newEntries.some(d => d.orderNum === orderNum && d.sku === sku);
+                    
+                    if (exists) continue; // Skip duplicates
+
+                    newEntries.push({
+                        id: now + i,
+                        dateInput: normalizeDate(cols[0]),
+                        timeInput: cols[1],
+                        orderDate: normalizeDate(cols[2]),
+                        orderNum: cols[3],
+                        platform: cols[4],
+                        sku: cols[5],
+                        desc: cols[6],
+                        orderQty: cols[7] || 0,
+                        rejQty: cols[8] || 0,
+                        replenRem: cols[9] || '',
+                        icStatus: cols[10] || 'Pending',
+                        timeICStatus: cols[11] || '',
+                        icRem: cols[12] || '',
+                        timeICRem: cols[13] || '',
+                        validator: cols[16] || '',
+                        disposition: cols[17] || ''
+                    });
+                }
+            }
+
+            if (newEntries.length > 0) {
+                validationData = [...validationData, ...newEntries];
+                await db.set('validationData', validationData);
+                renderValidationTable();
+                showToast(`Successfully imported ${newEntries.length} entries.`);
+            } else {
+                showToast("No valid data found in CSV.", "danger");
+            }
+            event.target.value = '';
+        };
+        reader.readAsText(file);
+    }
+
+    function downloadSampleCSV() {
+        const headers = "Date Input,Time Input,Order Date,Order Number,Platform,Sku,Description,Order Qty,Rejected Qty,Replen Remarks,IC Status,Time IC Status,IC Remarks,Time IC Remarks,Input Duration,Validation Duration,Validated by,Final Disposition";
+        const sampleRow = "2023-10-27,08:00,2023-10-26,ORD-SAMPLE,Lazada,SKU-999,Sample Item,50,2,None,Completed,09:00,Verified,09:15,1h 0m,0h 15m,Admin,Release";
+        const csv = headers + "\n" + sampleRow;
+        
+        const blob = new Blob([csv], { type: 'text/csv' });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = "Sample_Validation_Template.csv";
+        a.click();
+        showToast("Sample template downloaded.");
+    }
+
+    function exportValidationToCSV() {
+        let csv = "Date Input,Time Input,Order Date,Order Number,Platform,Sku,Description,Order Qty,Rejected Qty,Replen Remarks,IC Status,Time IC Status,IC Remarks,Time IC Remarks,Input Duration,Validation Duration,Validated by,Final Disposition\n";
+        validationData.forEach(d => {
+            let inDur = '-';
+            const diffIn = calculateDurationMinutes(d.timeInput, d.timeICStatus);
+            if (diffIn !== null) {
+                inDur = `${Math.floor(diffIn / 60)}h ${Math.floor(diffIn % 60)}m`;
+            }
+
+            let valDur = '-';
+            const diffVal = calculateDurationMinutes(d.timeICStatus, d.timeICRem);
+            if (diffVal !== null) {
+                valDur = `${Math.floor(diffVal / 60)}h ${Math.floor(diffVal % 60)}m`;
+            }
+
+            csv += `"${d.dateInput}","${d.timeInput}","${d.orderDate}","${d.orderNum}","${d.platform}","${d.sku}","${d.desc}",${d.orderQty},${d.rejQty},"${d.replenRem}","${d.icStatus}","${d.timeICStatus}","${d.icRem}","${d.timeICRem}","${inDur}","${valDur}","${d.validator}","${d.disposition}"\n`;
+        });
+
+        const blob = new Blob([csv], { type: 'text/csv' });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `Validation_Data_${new Date().toLocaleDateString()}.csv`;
+        a.click();
+        showToast("Data exported to CSV.");
+    }
+
+    // Attendance Logic
+    function handleScan(event) {
+        const id = event.target.value;
+        const feedback = document.getElementById('scan-feedback');
+        const user = users.find(u => u.id === id);
+        
+        if (user) {
+            feedback.style.color = 'green';
+            feedback.innerText = `Ready: ${user.name}`;
+        } else {
+            feedback.style.color = 'red';
+            feedback.innerText = id ? 'Unknown User' : '';
+        }
+    }
+
+    async function logAttendance(action) {
+        const idInput = document.getElementById('scan-id');
+        const id = idInput.value.trim();
+        
+        if (!id) {
+            showToast("Please enter or scan a User ID.", "danger");
+            return;
+        }
+
+        const user = users.find(u => u.id === id);
+
+        if (!user) {
+            showToast("Invalid User ID. Please register in Master first.", "danger");
+            return;
+        }
+
+        const now = new Date();
+        const dateStr = now.toLocaleDateString();
+        
+        // Sequence Validation Logic
+        const userTodayLogs = logs.filter(l => 
+            l.userId === id && 
+            new Date(l.timestamp).toLocaleDateString() === dateStr
+        );
+
+        const hasClockIn = userTodayLogs.some(l => l.action === 'Clock In');
+        const hasBreakOut = userTodayLogs.some(l => l.action === 'Break Out');
+        const hasBreakIn = userTodayLogs.some(l => l.action === 'Break In');
+        const hasClockOut = userTodayLogs.some(l => l.action === 'Clock Out');
+
+        if (action === 'Clock In' && hasClockIn) {
+            showToast(`${user.name} already clocked in today.`, "danger");
+            return;
+        }
+        if (action !== 'Clock In' && !hasClockIn) {
+            showToast(`${user.name} must Clock In first.`, "danger");
+            return;
+        }
+        if (action === 'Break Out' && hasBreakOut) {
+            showToast(`${user.name} already took a break out.`, "danger");
+            return;
+        }
+        if (action === 'Break In' && (!hasBreakOut || hasBreakIn)) {
+            showToast(`Break In sequence invalid for ${user.name}.`, "danger");
+            return;
+        }
+        if (action === 'Clock Out' && hasClockOut) {
+            showToast(`${user.name} already clocked out today.`, "danger");
+            return;
+        }
+
+        const selectedShift = document.getElementById('shift-select').value;
+        const logEntry = {
+            id: Date.now(), // Unique ID for editing/deleting
+            timestamp: now.toISOString(),
+            userId: user.id,
+            userName: user.name,
+            action: action,
+            shift: selectedShift
+        };
+
+        logs.push(logEntry);
+        await db.set('logs', logs);
+        
+        // Reset
+        idInput.value = '';
+        showToast(`${action} recorded for ${user.name}`);
+        document.getElementById('scan-feedback').innerText = '';
+        setTimeout(() => {
+            if (document.getElementById('scan-id').value === '') {
+                document.getElementById('scan-feedback').innerText = '';
+            }
+        }, 3000);
+        currentPage = 1; // Reset to first page to see new log
+        renderLogs();
+        updateAttendanceStats();
+    }
+
+    // Data Logic
+    function renderLogs() {
+        const tbody = document.querySelector('#log-table tbody');
+        if (!tbody) return;
+
+        // Group logs by Date and UserID
+        const grouped = {};
+        logs.forEach(l => {
+            const d = new Date(l.timestamp);
+            const dateStr = d.toLocaleDateString();
+            const key = `${dateStr}_${l.userId}`;
+            
+            if (!grouped[key]) {
+                grouped[key] = { 
+                    date: dateStr, 
+                    userId: l.userId, 
+                    userName: l.userName, 
+                    shift: l.shift, 
+                    in: '-', bOut: '-', bIn: '-', out: '-',
+                    sortKey: d.getTime() 
+                };
+            }
+            
+            const time = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
+            if (l.action === 'Clock In') grouped[key].in = time;
+            else if (l.action === 'Break Out') grouped[key].bOut = time;
+            else if (l.action === 'Break In') grouped[key].bIn = time;
+            else if (l.action === 'Clock Out') grouped[key].out = time;
+        });
+
+        let summaryArray = Object.values(grouped);
+
+        // Tab Filtering
+        if (activeShiftTab === 'History') {
+            summaryArray = summaryArray.filter(l => l.out !== '-');
+        } else if (activeShiftTab !== 'All') {
+            summaryArray = summaryArray.filter(l => l.shift === activeShiftTab);
+        }
+
+        // Global Date Filtering
+        const globalStart = document.getElementById('global-start').value;
+        const globalEnd = document.getElementById('global-end').value;
+        
+        if (globalStart || globalEnd) {
+            const startTime = globalStart ? new Date(globalStart).setHours(0,0,0,0) : null;
+            const endTime = globalEnd ? new Date(globalEnd).setHours(23,59,59,999) : null;
+            
+            summaryArray = summaryArray.filter(l => {
+                const logTime = l.sortKey;
+                if (startTime && logTime < startTime) return false;
+                if (endTime && logTime > endTime) return false;
+                return true;
+            });
+        }
+
+        summaryArray.sort((a, b) => b.sortKey - a.sortKey);
+
+        updateAttendanceStats(); // Keep counts accurate based on logic
+        const totalPages = Math.ceil(summaryArray.length / rowsPerPage) || 1;
+        
+        if (currentPage > totalPages) currentPage = totalPages;
+        if (currentPage < 1) currentPage = 1;
+
+        const start = (currentPage - 1) * rowsPerPage;
+        const paginatedSummary = summaryArray.slice(start, start + rowsPerPage);
+
+        document.getElementById('page-info').innerText = `Page ${currentPage} of ${totalPages}`;
+        document.getElementById('log-total').innerText = `Total: ${summaryArray.length} records`;
+        document.getElementById('log-prev').disabled = currentPage === 1;
+        document.getElementById('log-next').disabled = currentPage === totalPages;
+
+        tbody.innerHTML = paginatedSummary.map(l => {
+            return `
+                <tr>
+                    <td>${l.date}</td>
+                    <td>${l.userId}</td>
+                    <td>${l.userName}</td>
+                    <td>${l.shift}</td>
+                    <td>${l.in}</td>
+                    <td>${l.bOut}</td>
+                    <td>${l.bIn}</td>
+                    <td>${l.out}</td>
+                    <td class="text-center">
+                        <button class="btn btn-danger btn-sm" onclick="deleteDayLogs('${l.date}', '${l.userId}')"><i data-lucide="trash-2"></i></button>
+                    </td>
+                </tr>
+            `;
+        }).join('');
+        lucide.createIcons();
+    }
+
+    function changeLogPage(direction) {
+        currentPage += direction;
+        renderLogs();
+    }
+
+    function changeUserPage(direction) {
+        userCurrentPage += direction;
+        renderUserTable();
+    }
+
+    async function deleteDayLogs(date, userId) {
+        if(confirm(`Delete all records for ${userId} on ${date}?`)) {
+            logs = logs.filter(l => {
+                const lDate = new Date(l.timestamp).toLocaleDateString();
+                return !(lDate === date && l.userId === userId);
+            });
+            await db.set('logs', logs);
+            renderLogs();
+            updateDashboard();
+            showToast("Records deleted successfully.", "danger");
+        }
+    }
+
+    function exportToCSV() {
+        // Use the same logic as renderLogs to get the currently filtered data
+        renderLogs(); // Ensure current page/state is fresh
+        
+        // To export EVERYTHING currently matching the filters (not just current page)
+        // We can replicate the summaryArray logic from renderLogs
+        const grouped = {}; // ... (Local grouping logic same as renderLogs)
+        logs.forEach(l => {
+            const d = new Date(l.timestamp);
+            const key = `${d.toLocaleDateString()}_${l.userId}`;
+            if (!grouped[key]) grouped[key] = { date: d.toLocaleDateString(), id: l.userId, name: l.userName, shift: l.shift, in: '-', bOut: '-', bIn: '-', out: '-', sortKey: d.getTime() };
+            const time = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
+            if (l.action === 'Clock In') grouped[key].in = time;
+            else if (l.action === 'Break Out') grouped[key].bOut = time;
+            else if (l.action === 'Break In') grouped[key].bIn = time;
+            else if (l.action === 'Clock Out') grouped[key].out = time;
+        });
+
+        let data = Object.values(grouped).sort((a,b) => b.sortKey - a.sortKey);
+        
+        if (activeShiftTab === 'History') data = data.filter(l => l.out !== '-');
+        else if (activeShiftTab !== 'All') data = data.filter(l => l.shift === activeShiftTab);
+
+        const globalStart = document.getElementById('global-start').value;
+        const globalEnd = document.getElementById('global-end').value;
+        if (globalStart || globalEnd) {
+            const startTime = globalStart ? new Date(globalStart).setHours(0,0,0,0) : null;
+            const endTime = globalEnd ? new Date(globalEnd).setHours(23,59,59,999) : null;
+            data = data.filter(l => {
+                if (startTime && l.sortKey < startTime) return false;
+                if (endTime && l.sortKey > endTime) return false;
+                return true;
+            });
+        }
+
+        let csv = "Date,User ID,Name,Shift,Clock In,Break Out,Break In,Clock Out\n";
+        data.forEach(row => {
+            csv += `${row.date},${row.id},"${row.name}",${row.shift},${row.in},${row.bOut},${row.bIn},${row.out}\n`;
+        });
+
+        const blob = new Blob([csv], { type: 'text/csv' });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `Attendance_${activeShiftTab}_${globalStart || 'Start'}_to_${globalEnd || 'End'}.csv`;
+        a.click();
+        showToast("Exported filtered records.");
+    }
+
+    function clearLogs() {
+        supercodeAction = 'clear-attendance-logs';
+        toggleSupercodeModal(true);
+    }
+
+    async function confirmClearLogs() {
+        const code = document.getElementById('supercode-input').value;
+        if (code === "1234") {
+            if (supercodeAction === 'clear-attendance-logs') {
+                logs = [];
+                await db.set('logs', logs);
+                currentPage = 1;
+                renderLogs();
+                updateDashboard();
+                showToast("All attendance logs cleared.", "danger");
+            } else if (supercodeAction === 'bulk-delete-validation') {
+                validationData = validationData.filter(d => !selectedValidationIds.includes(d.id));
+                await db.set('validationData', validationData);
+                dataCurrentPage = 1;
+                renderValidationTable();
+                updateDashboard();
+                showToast(`Deleted ${selectedValidationIds.length} validation entries.`, "danger");
+                selectedValidationIds = [];
+                document.getElementById('select-all-val').checked = false;
+            }
+            
+            toggleSupercodeModal(false);
+            supercodeAction = '';
+        } else {
+            showToast("Invalid Supercode. Operation denied.", "danger");
+            toggleSupercodeModal(false);
+        }
+    }
+
+    // Dashboard Logic
+    function updateDashboard() {
+        document.getElementById('stat-users').innerText = users.length;
+        
+        const globalStart = document.getElementById('global-start').value;
+        const globalEnd = document.getElementById('global-end').value;
+
+        // Filter Validation Data
+        let dateFilteredData = [...validationData];
+        if (globalStart || globalEnd) {
+            dateFilteredData = dateFilteredData.filter(d => {
+                const entryDate = normalizeDate(d.dateInput);
+                if (!entryDate) return false;
+                if (globalStart && entryDate < globalStart) return false;
+                if (globalEnd && entryDate > globalEnd) return false;
+                return true;
+            });
+        }
+
+        // Calculate Top SKUs for Rankings
+        const skuVolume = {};
+        const skuRejected = {};
+        dateFilteredData.forEach(d => {
+            if (!d.sku) return;
+            skuVolume[d.sku] = (skuVolume[d.sku] || 0) + 1;
+            skuRejected[d.sku] = (skuRejected[d.sku] || 0) + (parseInt(d.rejQty) || 0);
+        });
+
+        const topVolume = Object.entries(skuVolume).sort((a,b) => b[1] - a[1]).slice(0, 5);
+        const topRej = Object.entries(skuRejected).filter(e => e[1] > 0).sort((a,b) => b[1] - a[1]).slice(0, 5);
+
+        const renderSkuRankings = (containerId, data, suffix, color) => {
+            const container = document.getElementById(containerId);
+            if (!container) return;
+            if (data.length === 0) {
+                container.innerHTML = '<p style="font-size: 0.7rem; color: #94a3b8; margin: auto;">No data available</p>';
+                return;
+            }
+            container.innerHTML = data.map(([sku, val]) => {
+                const imgUrl = `https://medias.watsons.com.ph/publishing/WTCPH-${sku}-front-zoom.jpg?version=1721927559`;
+                return `
+                    <div style="flex: 0 0 70px; display: flex; flex-direction: column; align-items: center; text-align: center;">
+                        <div style="position: relative; width: 55px; height: 55px; margin-bottom: 4px;">
+                            <img src="${imgUrl}" 
+                                 style="width: 100%; height: 100%; object-fit: contain; background: white; border: 1px solid #e2e8f0; border-radius: 6px; cursor: zoom-in;" 
+                                 onclick="zoomImage('${imgUrl}', '${sku}')"
+                                 onerror="this.src='https://via.placeholder.com/55?text=${sku}'">
+                            <div style="position: absolute; -top: 5px; -right: 5px; background: ${color}; color: ${color === 'var(--primary)' ? '#1e293b' : 'white'}; 
+                                        font-size: 0.6rem; font-weight: 800; min-width: 18px; height: 18px; border-radius: 50%; 
+                                        display: flex; align-items: center; justify-content: center; border: 2px solid white;
+                                        top: -5px; right: -5px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                                ${val}
+                            </div>
+                        </div>
+                        <span style="font-size: 0.65rem; font-weight: 700; color: #475569; width: 65px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${sku}</span>
+                        <span style="font-size: 0.6rem; color: #94a3b8;">${suffix}</span>
+                    </div>
+                `;
+            }).join('');
+        };
+
+        renderSkuRankings('top-sku-volume', topVolume, 'Orders', 'var(--primary)');
+        renderSkuRankings('top-sku-rejected', topRej, 'Rejected', 'var(--danger)');
+
+        // Validation Data Stats
+        const totalValidations = dateFilteredData.length;
+        
+        const completedCount = dateFilteredData.filter(d => (d.icStatus || '').toLowerCase() === 'completed').length;
+        const pendingCount = dateFilteredData.filter(d => (d.icStatus || '').toLowerCase() === 'pending').length;
+        const ongoingCount = dateFilteredData.filter(d => (d.icStatus || '').toLowerCase() === 'on-going').length;
+
+        let filteredMonitorItems = dateFilteredData.filter(d => 
+            (d.icStatus || 'Pending').toLowerCase() === activeDashboardTab.toLowerCase()
+        );
+
+        const nowTimeStr = new Date().getHours().toString().padStart(2, '0') + ':' + new Date().getMinutes().toString().padStart(2, '0');
+        
+        // Calculate Aging Summary for all on-going items
+        let agingLow = 0, agingMed = 0, agingHigh = 0;
+        const allOngoing = dateFilteredData.filter(d => (d.icStatus || '').toLowerCase() === 'on-going');
+        allOngoing.forEach(item => {
+            if (item.timeICStatus) {
+                const diff = calculateDurationMinutes(item.timeICStatus, nowTimeStr);
+                if (diff !== null) {
+                    if (diff <= 30) agingLow++;
+                    else if (diff <= 60) agingMed++;
+                    else {
+                        agingHigh++;
+                        // Sound alert logic for high aging items
+                        if (!alertedHighAgingIds.has(item.id)) {
+                            alertSound.play().catch(() => {});
+                            alertedHighAgingIds.add(item.id);
+                            showToast(`High Aging Alert: SKU ${item.sku} has exceeded 60 minutes!`, "danger");
+                        }
+                    }
+                }
+            }
+        });
+
+        document.getElementById('dash-aging-low').innerText = agingLow;
+        document.getElementById('dash-aging-med').innerText = agingMed;
+        document.getElementById('dash-aging-high').innerText = agingHigh;
+
+        // Search Filter for Monitor
+        if (dashboardSearchTerm) {
+            const term = dashboardSearchTerm.toLowerCase();
+            filteredMonitorItems = filteredMonitorItems.filter(d => 
+                (d.orderNum && d.orderNum.toLowerCase().includes(term)) ||
+                (d.sku && d.sku.toLowerCase().includes(term)) ||
+                (d.desc && d.desc.toLowerCase().includes(term))
+            );
+        }
+
+        // Sort to keep 'OP' Platform as Priority 1, then by aging duration (descending)
+        filteredMonitorItems.sort((a, b) => {
+            const isA_OP = (a.platform || '').toUpperCase() === 'OP';
+            const isB_OP = (b.platform || '').toUpperCase() === 'OP';
+
+            if (isA_OP !== isB_OP) return isA_OP ? -1 : 1;
+
+            if (activeDashboardTab === 'On-going') {
+                const durA = calculateDurationMinutes(a.timeICStatus, nowTimeStr) || 0;
+                const durB = calculateDurationMinutes(b.timeICStatus, nowTimeStr) || 0;
+                return durB - durA;
+            }
+            return 0;
+        });
+
+        // Update Attendance Stats for Dashboard
+        const stats = getAttendanceStats(globalStart, globalEnd);
+        
+        document.getElementById('dash-stat-present').innerText = stats.present;
+        document.getElementById('dash-stat-break').innerText = stats.onBreak;
+        document.getElementById('dash-stat-completed').innerText = stats.completed;
+        
+        document.getElementById('dash-stat-total-val').innerText = totalValidations;
+        document.getElementById('dash-stat-val-completed').innerText = completedCount;
+        document.getElementById('dash-stat-val-pending').innerText = pendingCount;
+        document.getElementById('dash-stat-ongoing-count').innerText = ongoingCount;
+
+        // Update Validation Monitor Cards
+        const container = document.getElementById('ongoing-validations-container');
+
+        if (filteredMonitorItems.length === 0) {
+            container.innerHTML = `<div class="card" style="grid-column: 1/-1; text-align: center; color: var(--secondary); padding: 2rem;">
+                <p>No validation tasks are currently marked as "${activeDashboardTab}".</p>
+            </div>`;
+        } else {
+            container.innerHTML = filteredMonitorItems.map(item => {
+                const imgUrl = `https://medias.watsons.com.ph/publishing/WTCPH-${item.sku}-front-zoom.jpg?version=1721927559`;
+                const isOP = (item.platform || '').toUpperCase() === 'OP';
+                
+                let agingBadge = '';
+                if (activeDashboardTab === 'On-going' && item.timeICStatus) {
+                    const diff = calculateDurationMinutes(item.timeICStatus, nowTimeStr);
+                    if (diff !== null) {
+                        const h = Math.floor(diff / 60);
+                        const m = Math.floor(diff % 60);
+                        const isHighAging = diff > 60; // Over 1 hour
+                        agingBadge = `<div style="position: absolute; top: 10px; right: ${isOP ? '95px' : '10px'}; background: ${isHighAging ? 'var(--danger)' : 'var(--secondary)'}; color: white; padding: 2px 8px; border-radius: 20px; font-size: 0.7rem; font-weight: bold; display: flex; align-items: center; gap: 4px; box-shadow: 0 1px 2px rgba(0,0,0,0.1);">
+                            <i data-lucide="clock" style="width:10px; height:10px;"></i> Aging: ${h}h ${m}m
+                        </div>`;
+                    }
+                }
+
+                return `
+                    <div class="card ongoing-card">
+                        ${isOP ? `
+                        <div style="position: absolute; top: 10px; right: 10px; background: var(--danger); color: white; padding: 2px 8px; border-radius: 20px; font-size: 0.7rem; font-weight: bold; display: flex; align-items: center; gap: 4px; box-shadow: 0 2px 4px rgba(0,0,0,0.2);">
+                            <i data-lucide="zap" style="width:10px; height:10px;"></i> PRIORITY 1
+                        </div>` : ''}
+                        ${agingBadge}
+                        <img src="${imgUrl}" class="sku-image" alt="SKU Image" style="cursor: zoom-in;" onclick="zoomImage('${imgUrl}', '${item.sku}')" onerror="this.src='https://via.placeholder.com/200?text=No+Image'">
+                        <div style="width: 100%; text-align: left; border-bottom: 1px solid #eee; padding-bottom: 0.5rem; margin-bottom: 0.5rem;">
+                            <span style="font-size: 0.7rem; color: var(--secondary); font-weight: bold;">ORDER #${item.orderNum || 'N/A'}</span>
+                            <div style="font-weight: bold; font-size: 1.1rem;">SKU: ${item.sku}</div>
+                        </div>
+                        <div style="font-size: 0.85rem; color: var(--secondary); margin-bottom: 0.5rem; height: 2.8rem; overflow: hidden;">${item.desc}</div>
+                        <div style="display: flex; justify-content: space-between; width: 100%; align-items: center; margin-top: auto;">
+                            <div style="display: flex; flex-direction: column; align-items: flex-start; gap: 2px;">
+                                <span style="font-size: 0.8rem; color: var(--secondary);"><i data-lucide="tag" style="width:12px; vertical-align:middle;"></i> ${item.platform || 'General'}</span>
+                                <span style="font-size: 0.75rem; color: var(--secondary); font-weight: bold;"><i data-lucide="user" style="width:12px; vertical-align:middle;"></i> ${item.validator || 'Unassigned'}</span>
+                            </div>
+                            <div style="background: #fee2e2; color: #ef4444; padding: 0.2rem 0.5rem; border-radius: 4px; font-weight: bold; font-size: 0.85rem;">
+                                Rejected: ${item.rejQty || 0}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+        lucide.createIcons();
+    }
+
+    function getAttendanceStats(start, end, returnUserObjects = false) {
+        const onDutyUsers = [];
+        let todayLogs = logs;
+        
+        if (start || end) {
+            const startTime = start ? new Date(start).setHours(0,0,0,0) : null;
+            const endTime = end ? new Date(end).setHours(23,59,59,999) : null;
+            todayLogs = logs.filter(l => {
+                const t = new Date(l.timestamp).getTime();
+                if (startTime && t < startTime) return false;
+                if (endTime && t > endTime) return false;
+                return true;
+            });
+        }
+
+        const userStatus = {};
+        todayLogs.forEach(l => {
+            if (!userStatus[l.userId]) userStatus[l.userId] = [];
+            userStatus[l.userId].push(l);
+        });
+
+        let present = 0, onBreak = 0, completed = 0;
+
+        Object.entries(userStatus).forEach(([userId, userLogs]) => {
+            userLogs.sort((a,b) => new Date(a.timestamp) - new Date(b.timestamp));
+            const lastAction = userLogs[userLogs.length - 1].action;
+            const hasClockOut = userLogs.some(l => l.action === 'Clock Out');
+
+            if (hasClockOut) {
+                completed++;
+            } else {
+                present++;
+                const user = users.find(u => u.id === userId);
+                if (user) onDutyUsers.push(user);
+                if (lastAction === 'Break Out') onBreak++;
+            }
+        });
+
+        if (returnUserObjects) return onDutyUsers;
+        return { present, onBreak, completed };
+    }
+
+    function getOnDutyUsers() {
+        // Helper to get current on-duty users specifically
+        return getAttendanceStats(null, null, true);
+    }
+
+    function updateAttendanceStats() {
+        const stats = getAttendanceStats();
+        document.getElementById('att-stat-present').innerText = stats.present;
+        document.getElementById('att-stat-break').innerText = stats.onBreak;
+        document.getElementById('att-stat-completed').innerText = stats.completed;
+    }
+
+    // Initial Load - Asynchronous Entry Point
+    window.onload = async () => {
+        try {
+            await db.init();
+            
+            // Load State from IndexedDB
+            users = await db.get('users', []);
+            logs = await db.get('logs', []);
+            validationData = await db.get('validationData', []);
+            
+            // Load Master Lists with array fallback to prevent .map() errors
+            const storedIc = await db.get('icRemarksMaster', ["Verified", "Discrepancy Found", "Quantity Match"]);
+            icRemarksMaster = Array.isArray(storedIc) ? storedIc : ["Verified", "Discrepancy Found", "Quantity Match"];
+            
+            const storedDispo = await db.get('dispoRemarksMaster', ["Release", "Hold", "Reject", "Partial Release"]);
+            dispoRemarksMaster = Array.isArray(storedDispo) ? storedDispo : ["Release", "Hold", "Reject", "Partial Release"];
+
+            setDefaultGlobalDates();
+            updateDashboard();
+            renderUserTable();
+            updateDatalists();
+            lucide.createIcons();
+        } catch (err) {
+            console.error("Database initialization failed:", err);
+            showToast("System Error: Failed to initialize storage.", "danger");
+        }
+    };
+</script>
+
+</body>
+</html>
