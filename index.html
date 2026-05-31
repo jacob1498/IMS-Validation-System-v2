@@ -505,6 +505,7 @@
             </div>
             <div style="position: relative; flex: 1; max-width: 300px;">
                 <input type="text" id="dashboard-search" placeholder="Search SKU, Order #, or Description..." style="padding: 0.4rem 0.4rem 0.4rem 2rem;" oninput="handleDashboardSearch(this.value)">
+                <input type="text" id="dashboard-search" placeholder="Search SKU, Order #, or Description..." style="padding: 0.4rem 0.4rem 0.4rem 2rem;" oninput="handleDashboardSearch(this.value)" autocomplete="off">
                 <i data-lucide="search" style="position: absolute; left: 8px; top: 50%; transform: translateY(-50%); width: 14px; color: var(--secondary);"></i>
             </div>
         </div>
@@ -610,6 +611,7 @@
                 <h2>Validation Data Log</h2>
                 <div style="position: relative; flex: 1; max-width: 400px; margin: 0 2rem;">
                     <input type="text" id="data-search" placeholder="Search Order, SKU, Description..." style="padding: 0.4rem 0.4rem 0.4rem 2rem;" oninput="handleDataSearch(this.value)">
+                    <input type="text" id="data-search" placeholder="Search Order, SKU, Description..." style="padding: 0.4rem 0.4rem 0.4rem 2rem;" oninput="handleDataSearch(this.value)" autocomplete="off">
                     <i data-lucide="search" style="position: absolute; left: 8px; top: 50%; transform: translateY(-50%); width: 14px; color: var(--secondary);"></i>
                 </div>
                 <div class="btn-group">
@@ -684,6 +686,7 @@
             <h3 style="margin: 0;">Registered Users</h3>
             <div style="position: relative;">
                 <input type="text" id="user-search" placeholder="Search..." style="width: 200px; padding: 0.4rem 0.4rem 0.4rem 2rem;" oninput="handleUserSearch(this.value)">
+                <input type="text" id="user-search" placeholder="Search..." style="width: 200px; padding: 0.4rem 0.4rem 0.4rem 2rem;" oninput="handleUserSearch(this.value)" autocomplete="off">
                 <i data-lucide="search" style="position: absolute; left: 8px; top: 50%; transform: translateY(-50%); width: 14px; color: var(--secondary);"></i>
             </div>
         </div>
@@ -765,6 +768,21 @@
     </div>
 </div>
 
+<!-- Modal for SKU Assignment -->
+<div id="sku-assignment-modal" class="modal">
+    <div class="modal-content" style="max-width: 400px;">
+        <div class="modal-header">
+            <h2 style="margin:0">Assign SKU Tasks</h2>
+            <button onclick="toggleSkuAssignmentModal(false)" style="cursor:pointer; border:none; background:none; font-size:1.5rem">&times;</button>
+        </div>
+        <div class="form-group">
+            <label id="sku-assign-label">Assign all pending orders for this SKU:</label>
+            <select id="sku-assign-validator"></select>
+        </div>
+        <button class="btn btn-primary" style="width: 100%; margin-top: 1rem;" onclick="saveSkuAssignmentDetails()"><i data-lucide="user-check"></i> Assign to Validator</button>
+    </div>
+</div>
+
 <!-- Modal for Supercode Verification -->
 <div id="supercode-modal" class="modal">
     <div class="modal-content" style="max-width: 400px;">
@@ -775,6 +793,7 @@
         <div class="form-group">
             <label>Enter Supercode to Clear All Logs</label>
             <input type="password" id="supercode-input" placeholder="****">
+            <input type="password" id="supercode-input" placeholder="****" autocomplete="new-password">
         </div>
         <button class="btn btn-danger" style="width: 100%; margin-top: 1rem;" onclick="confirmClearLogs()"><i data-lucide="shield-alert"></i> Confirm Clear All</button>
     </div>
@@ -920,6 +939,7 @@
     let userSearchTerm = '';
     let currentCompletionId = null;
     let currentAssignmentId = null;
+    let currentAssignmentSku = null;
     let supercodeAction = ''; // Track what the supercode is for
     let selectedValidationIds = [];
     let activeShiftTab = 'All';
@@ -1786,6 +1806,66 @@
         }
     }
 
+    function openSkuAssignment(sku) {
+        currentAssignmentSku = sku;
+        const globalStart = document.getElementById('global-start').value;
+        const globalEnd = document.getElementById('global-end').value;
+        
+        const pendingCount = validationData.filter(d => {
+            const entryDate = normalizeDate(d.dateInput);
+            const dateMatch = (!globalStart || entryDate >= globalStart) && (!globalEnd || entryDate <= globalEnd);
+            return d.sku === sku && (d.icStatus || 'Pending').toLowerCase() === 'pending' && dateMatch;
+        }).length;
+        
+        const label = document.getElementById('sku-assign-label');
+        if (label) label.innerText = `Assign ${pendingCount} pending orders for SKU ${sku}:`;
+        toggleSkuAssignmentModal(true);
+    }
+
+    function toggleSkuAssignmentModal(show) {
+        const modal = document.getElementById('sku-assignment-modal');
+        if (modal) modal.style.display = show ? 'block' : 'none';
+        if (show) {
+            populateOnDutyDropdown('sku-assign-validator');
+        }
+    }
+
+    async function saveSkuAssignmentDetails() {
+        const validator = document.getElementById('sku-assign-validator').value;
+        if (!validator) {
+            showToast("Please select a validator to proceed.", "danger");
+            return;
+        }
+
+        const globalStart = document.getElementById('global-start').value;
+        const globalEnd = document.getElementById('global-end').value;
+        const now = new Date();
+        const timeStr = now.getHours().toString().padStart(2, '0') + ':' + now.getMinutes().toString().padStart(2, '0');
+
+        let count = 0;
+        validationData.forEach(item => {
+            const entryDate = normalizeDate(item.dateInput);
+            const dateMatch = (!globalStart || entryDate >= globalStart) && (!globalEnd || entryDate <= globalEnd);
+            
+            if (item.sku === currentAssignmentSku && (item.icStatus || 'Pending').toLowerCase() === 'pending' && dateMatch) {
+                item.icStatus = 'On-going';
+                item.timeICStatus = timeStr;
+                item.icRem = 'On-going';
+                item.disposition = 'Pending';
+                item.validator = validator;
+                count++;
+            }
+        });
+
+        if (count > 0) {
+            await db.set('validationData', validationData);
+            showToast(`SKU ${currentAssignmentSku}: ${count} orders assigned to ${validator}`);
+            toggleSkuAssignmentModal(false);
+            updateDashboard();
+            renderValidationTable();
+        }
+    }
+
     async function saveAssignmentDetails() {
         const item = validationData.find(d => d.id === currentAssignmentId);
         const validator = document.getElementById('assign-validator').value;
@@ -2426,6 +2506,13 @@
                     }
                 }
 
+                // Action Button for Pending SKU Assignment
+                const actionButton = activeDashboardTab.toLowerCase() === 'pending' ? `
+                    <button class="btn btn-primary btn-sm" style="width: 100%; margin-top: 0.8rem; height: 32px; border-radius: 6px; font-weight: 700;" onclick="openSkuAssignment('${item.sku}')">
+                        <i data-lucide="user-plus" style="width: 14px; height: 14px;"></i> ASSIGN SKU
+                    </button>
+                ` : '';
+
                 return `
                     <div class="card ongoing-card">
                         ${isOP ? `
@@ -2448,6 +2535,7 @@
                                 Rejected: ${item.rejQty || 0}
                             </div>
                         </div>
+                        ${actionButton}
                     </div>
                 `;
             }).join('');
