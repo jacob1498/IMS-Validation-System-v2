@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Attendance System</title>
+    <title>Auto-Validation Tracker</title>
     <!-- Modern Icons Library -->
     <script src="https://unpkg.com/lucide@latest"></script>
     <style>
@@ -321,7 +321,7 @@
         .pagination {
             display: flex;
             justify-content: center;
-            gap: 1rem;
+            gap: 0.4rem;
             margin-top: 1rem;
             align-items: center;
             font-size: 0.9rem;
@@ -490,10 +490,18 @@
 
         <h2 style="margin-top: 2rem;"><i data-lucide="layers"></i> Validation Status Monitor</h2>
         <div style="display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap; margin-top: 1rem;">
-            <div class="sub-nav" style="margin-bottom: 0;">
-                <button onclick="setDashboardTab('On-going')" id="dash-tab-Ongoing" class="active">On-going</button>
-                <button onclick="setDashboardTab('Pending')" id="dash-tab-Pending">Pending</button>
-                <button onclick="setDashboardTab('Completed')" id="dash-tab-Completed">Completed</button>
+            <div style="display: flex; flex-direction: column;">
+                <div class="sub-nav" style="margin-bottom: 0;">
+                    <button onclick="setDashboardTab('On-going')" id="dash-tab-Ongoing" class="active">On-going</button>
+                    <button onclick="setDashboardTab('Pending')" id="dash-tab-Pending">Pending</button>
+                    <button onclick="setDashboardTab('Completed')" id="dash-tab-Completed">Completed</button>
+                </div>
+                <div id="completed-dispo-tabs" style="display: none; gap: 0.8rem; margin-top: 0.5rem; padding-left: 0.5rem; align-items: center;">
+                    <button onclick="setDispositionTab('All')" id="dispo-tab-All" style="background: none; border: none; font-size: 0.7rem; font-weight: 700; cursor: pointer; color: var(--primary); border-bottom: 2px solid var(--primary); padding: 0 4px;">ALL</button>
+                    <button onclick="setDispositionTab('Proceed Orders')" id="dispo-tab-Proceed" style="background: none; border: none; font-size: 0.7rem; font-weight: 700; cursor: pointer; color: var(--secondary); padding: 0 4px;">PROCEED ORDERS</button>
+                    <button onclick="setDispositionTab('For Cancellation')" id="dispo-tab-Cancel" style="background: none; border: none; font-size: 0.7rem; font-weight: 700; cursor: pointer; color: var(--secondary); padding: 0 4px;">FOR CANCELLATION</button>
+                    <button onclick="setDispositionTab('For Disposition')" id="dispo-tab-Dispo" style="background: none; border: none; font-size: 0.7rem; font-weight: 700; cursor: pointer; color: var(--secondary); padding: 0 4px;">FOR DISPOSITION</button>
+                </div>
             </div>
             <div style="position: relative; flex: 1; max-width: 300px;">
                 <input type="text" id="dashboard-search" placeholder="Search SKU, Order #, or Description..." style="padding: 0.4rem 0.4rem 0.4rem 2rem;" oninput="handleDashboardSearch(this.value)">
@@ -587,11 +595,9 @@
                         <tbody></tbody>
                     </table>
                 </div>
-                <div class="pagination">
-                    <button class="btn btn-primary btn-sm" id="log-prev" onclick="changeLogPage(-1)">Previous</button>
-                    <div id="page-info" style="font-weight: 600;">Page 1 of 1</div>
-                    <button class="btn btn-primary btn-sm" id="log-next" onclick="changeLogPage(1)">Next</button>
-                    <span id="log-total" style="color: var(--secondary); margin-left: auto;">Total: 0 records</span>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 1rem;">
+                    <div class="pagination" id="log-pagination" style="margin-top: 0; flex: 1;"></div>
+                    <span id="log-total" style="color: var(--secondary); font-size: 0.8rem; white-space: nowrap; margin-left: 1rem;">Total: 0 records</span>
                 </div>
             </div>
         </div>
@@ -688,11 +694,7 @@
                 <tbody></tbody>
             </table>
         </div>
-        <div class="pagination" style="margin-top: 1rem;">
-            <button class="btn btn-primary btn-sm" id="user-prev" onclick="changeUserPage(-1)">Prev</button>
-            <span id="user-page-info" style="font-weight: 600;">Page 1</span>
-            <button class="btn btn-primary btn-sm" id="user-next" onclick="changeUserPage(1)">Next</button>
-        </div>
+        <div class="pagination" id="user-pagination" style="margin-top: 1rem;"></div>
     </div>
 </div>
 
@@ -922,6 +924,7 @@
     let selectedValidationIds = [];
     let activeShiftTab = 'All';
     let activeDashboardTab = 'On-going';
+    let activeDispositionTab = 'All';
     const rowsPerPage = 10;
     const usersPerPage = 5;
     const dataRowsPerPage = 15;
@@ -1177,6 +1180,38 @@
         });
         const btnId = `dash-tab-${tab.replace('-', '')}`;
         document.getElementById(btnId).classList.add('active');
+
+        // Handle disposition sub-tabs visibility
+        const dispoContainer = document.getElementById('completed-dispo-tabs');
+        if (dispoContainer) {
+            dispoContainer.style.display = (tab === 'Completed') ? 'flex' : 'none';
+        }
+
+        updateDashboard();
+    }
+
+    function setDispositionTab(subTab) {
+        activeDispositionTab = subTab;
+        const container = document.getElementById('completed-dispo-tabs');
+        if (!container) return;
+        
+        container.querySelectorAll('button').forEach(btn => {
+            btn.style.color = 'var(--secondary)';
+            btn.style.borderBottom = 'none';
+        });
+        
+        const btnMap = {
+            'All': 'dispo-tab-All',
+            'Proceed Orders': 'dispo-tab-Proceed',
+            'For Cancellation': 'dispo-tab-Cancel',
+            'For Disposition': 'dispo-tab-Dispo'
+        };
+        
+        const activeBtn = document.getElementById(btnMap[subTab]);
+        if (activeBtn) {
+            activeBtn.style.color = 'var(--primary)';
+            activeBtn.style.borderBottom = '2px solid var(--primary)';
+        }
         updateDashboard();
     }
 
@@ -1266,9 +1301,7 @@
         const start = (userCurrentPage - 1) * usersPerPage;
         const pagedUsers = filteredUsers.slice(start, start + usersPerPage);
 
-        document.getElementById('user-page-info').innerText = `Page ${userCurrentPage} of ${totalPages}`;
-        document.getElementById('user-prev').disabled = userCurrentPage === 1;
-        document.getElementById('user-next').disabled = userCurrentPage === totalPages;
+        renderPagination('user-pagination', userCurrentPage, totalPages, 'changeUserPage');
 
         tbody.innerHTML = pagedUsers.map(u => `
             <tr>
@@ -1622,15 +1655,95 @@
         updateDashboard();
     }
 
-    function renderDataPagination(totalPages) {
-        const container = document.getElementById('data-pagination');
+    /**
+     * Enhanced Pagination Renderer
+     * Adds First/Last/Jump controls for > 10 pages
+     */
+    function renderPagination(containerId, currentPage, totalPages, changePageFnName) {
+        const container = document.getElementById(containerId);
         if (!container) return;
         
-        let html = '';
-        for (let i = 1; i <= totalPages; i++) {
-            html += `<button class="btn btn-sm ${i === dataCurrentPage ? 'btn-primary' : 'btn-secondary'}" onclick="changeDataPage(${i})">${i}</button>`;
+        // Security Deterrents: Disable Right-click and View Source shortcuts
+        document.addEventListener('contextmenu', (e) => e.preventDefault());
+        document.addEventListener('keydown', (e) => {
+            // Disable F12
+            if (e.keyCode === 123) {
+                e.preventDefault();
+                return false;
+            }
+            // Disable Ctrl+Shift+I, Ctrl+Shift+J, Ctrl+U
+            if (e.ctrlKey && (e.shiftKey && (e.keyCode === 73 || e.keyCode === 74) || e.keyCode === 85)) {
+                e.preventDefault();
+                return false;
+            }
+        });
+
+        // Anti-Debugging Trap
+        setInterval(() => {
+            const startTime = performance.now();
+            debugger;
+            const endTime = performance.now();
+            if (endTime - startTime > 100) {
+                // If the debugger statement took a long time, devtools is likely open
+                document.body.innerHTML = `
+                    <div style="display:flex; justify-content:center; align-items:center; height:100vh; font-family:sans-serif; background:#1e293b; color:white; text-align:center; padding:2rem;">
+                        <div><h1>Security Alert</h1><p>Access to developer tools is restricted on this system.</p></div>
+                    </div>`;
+            }
+        }, 1000);
+        
+        let buttons = [];
+        const addBtn = (p, label, active = false, disabled = false) => {
+            buttons.push(`<button class="btn btn-sm ${active ? 'btn-primary' : 'btn-secondary'}" ${disabled ? 'disabled' : ''} onclick="${changePageFnName}(${p})">${label}</button>`);
+        };
+
+        if (totalPages <= 1) {
+            container.innerHTML = `<span style="color: var(--secondary); font-size: 0.85rem; font-weight: 600; padding: 0.5rem;">Page 1 of 1</span>`;
+            return;
         }
-        container.innerHTML = html;
+
+        if (totalPages > 10) addBtn(1, '<i data-lucide="chevrons-left"></i>', false, currentPage === 1);
+        addBtn(Math.max(1, currentPage - 1), '<i data-lucide="chevron-left"></i>', false, currentPage === 1);
+
+        if (totalPages <= 10) {
+            for (let i = 1; i <= totalPages; i++) addBtn(i, i, i === currentPage);
+        } else {
+            // Logic for more than 10 pages
+            let start = Math.max(1, currentPage - 2);
+            let end = Math.min(totalPages, currentPage + 2);
+
+            if (start > 1) {
+                addBtn(1, '1');
+                if (start > 2) buttons.push('<span style="padding: 0 0.2rem; color: var(--secondary)">...</span>');
+            }
+            for (let i = start; i <= end; i++) addBtn(i, i, i === currentPage);
+            if (end < totalPages) {
+                if (end < totalPages - 1) buttons.push('<span style="padding: 0 0.2rem; color: var(--secondary)">...</span>');
+                addBtn(totalPages, totalPages);
+            }
+        }
+
+        addBtn(Math.min(totalPages, currentPage + 1), '<i data-lucide="chevron-right"></i>', false, currentPage === totalPages);
+        if (totalPages > 10) {
+            addBtn(totalPages, '<i data-lucide="chevrons-right"></i>', false, currentPage === totalPages);
+            
+            // Add Jump-to-Page Control
+            buttons.push(`
+                <div style="display: flex; align-items: center; gap: 0.3rem; margin-left: 0.5rem; border-left: 1px solid #e2e8f0; padding-left: 0.5rem;">
+                    <span style="font-size: 0.75rem; color: var(--secondary);">Jump:</span>
+                    <input type="number" min="1" max="${totalPages}" value="${currentPage}" 
+                           style="width: 45px; padding: 0.2rem; font-size: 0.8rem; text-align: center; border: 1px solid #cbd5e1; border-radius: 4px;" 
+                           onchange="const val = parseInt(this.value); if(val >= 1 && val <= ${totalPages}) ${changePageFnName}(val)">
+                </div>
+            `);
+        }
+
+        container.innerHTML = buttons.join('');
+        lucide.createIcons();
+    }
+
+    function renderDataPagination(totalPages) {
+        renderPagination('data-pagination', dataCurrentPage, totalPages, 'changeDataPage');
     }
 
     function changeDataPage(page) {
@@ -2012,10 +2125,8 @@
         const start = (currentPage - 1) * rowsPerPage;
         const paginatedSummary = summaryArray.slice(start, start + rowsPerPage);
 
-        document.getElementById('page-info').innerText = `Page ${currentPage} of ${totalPages}`;
+        renderPagination('log-pagination', currentPage, totalPages, 'changeLogPage');
         document.getElementById('log-total').innerText = `Total: ${summaryArray.length} records`;
-        document.getElementById('log-prev').disabled = currentPage === 1;
-        document.getElementById('log-next').disabled = currentPage === totalPages;
 
         tbody.innerHTML = paginatedSummary.map(l => {
             return `
@@ -2037,13 +2148,13 @@
         lucide.createIcons();
     }
 
-    function changeLogPage(direction) {
-        currentPage += direction;
+    function changeLogPage(page) {
+        currentPage = page;
         renderLogs();
     }
 
-    function changeUserPage(direction) {
-        userCurrentPage += direction;
+    function changeUserPage(page) {
+        userCurrentPage = page;
         renderUserTable();
     }
 
@@ -2217,6 +2328,13 @@
         let filteredMonitorItems = dateFilteredData.filter(d => 
             (d.icStatus || 'Pending').toLowerCase() === activeDashboardTab.toLowerCase()
         );
+
+        // Apply Disposition sub-filter if in Completed tab
+        if (activeDashboardTab === 'Completed' && activeDispositionTab !== 'All') {
+            filteredMonitorItems = filteredMonitorItems.filter(d => 
+                (d.disposition || '').toLowerCase() === activeDispositionTab.toLowerCase()
+            );
+        }
 
         const nowTimeStr = new Date().getHours().toString().padStart(2, '0') + ':' + new Date().getMinutes().toString().padStart(2, '0');
         
