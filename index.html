@@ -466,6 +466,12 @@
             border-color: var(--primary);
             transform: scale(1.1);
         }
+
+        .focused-row {
+            background-color: #f1f5f9 !important;
+            outline: 2px solid var(--primary);
+            outline-offset: -2px;
+        }
     </style>
 </head>
 <body>
@@ -768,6 +774,12 @@
                     <button class="btn btn-success btn-sm" onclick="exportValidationToCSV()"><i data-lucide="download"></i> Export CSV</button>
                 </div>
                 <input type="file" id="import-input" style="display: none;" accept=".csv" onchange="handleImport(event)">
+            </div>
+            <div class="sub-nav">
+                <button onclick="setDataTab('All')" id="data-tab-All" class="active">All Records</button>
+                <button onclick="setDataTab('Pending')" id="data-tab-Pending">Pending</button>
+                <button onclick="setDataTab('On-going')" id="data-tab-Ongoing">On-going</button>
+                <button onclick="setDataTab('Completed')" id="data-tab-Completed">Completed</button>
             </div>
             <div class="table-wrapper">
                 <table id="validation-table">
@@ -1080,6 +1092,8 @@
     let dataSearchTerm = '';
     let dashboardSearchTerm = '';
     let userSearchTerm = '';
+    let activeDataTab = 'All';
+    let focusedRowIndex = -1;
     let currentCompletionId = null;
     let currentAssignmentId = null;
     let currentAssignmentSku = null;
@@ -1136,6 +1150,62 @@
         const wrapper = document.querySelector('.view.active .table-wrapper');
         if (wrapper) wrapper.scrollBy({ top: amount, behavior: 'smooth' });
         else window.scrollBy({ top: amount, behavior: 'smooth' });
+    }
+
+    function handleTableKeyDown(e) {
+        if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT' || e.target.tagName === 'TEXTAREA') return;
+
+        if (document.getElementById('view-data').classList.contains('active')) {
+            const tbody = document.querySelector('#validation-table tbody');
+            if (!tbody) return;
+            const rows = tbody.querySelectorAll('tr');
+            if (rows.length === 0) return;
+
+            if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                focusedRowIndex = Math.min(focusedRowIndex + 1, rows.length - 1);
+                highlightRow();
+            } else if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                focusedRowIndex = Math.max(focusedRowIndex - 1, 0);
+                highlightRow();
+            } else if (e.key === ' ') {
+                if (focusedRowIndex >= 0 && focusedRowIndex < rows.length) {
+                    e.preventDefault();
+                    const checkbox = rows[focusedRowIndex].querySelector('.val-checkbox');
+                    if (checkbox) {
+                        checkbox.checked = !checkbox.checked;
+                    }
+                }
+            }
+        }
+    }
+
+    function highlightRow() {
+        const tbody = document.querySelector('#validation-table tbody');
+        if (!tbody) return;
+        const rows = tbody.querySelectorAll('tr');
+        rows.forEach((row, idx) => {
+            if (idx === focusedRowIndex) {
+                row.classList.add('focused-row');
+                row.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            } else {
+                row.classList.remove('focused-row');
+            }
+        });
+    }
+
+    function setDataTab(tab) {
+        activeDataTab = tab;
+        document.querySelectorAll('#view-data .sub-nav button').forEach(btn => {
+            btn.classList.remove('active');
+        });
+        const btnId = `data-tab-${tab.replace('-', '')}`;
+        const btn = document.getElementById(btnId);
+        if (btn) btn.classList.add('active');
+        dataCurrentPage = 1;
+        focusedRowIndex = -1;
+        renderValidationTable();
     }
 
     const usersPerPage = 5;
@@ -1619,6 +1689,11 @@
             });
         }
 
+        // Status Tab Filter
+        if (activeDataTab !== 'All') {
+            filteredData = filteredData.filter(d => (d.icStatus || 'Pending').toLowerCase() === activeDataTab.toLowerCase());
+        }
+
         // Search Filter
         if (dataSearchTerm) {
             const term = dataSearchTerm.toLowerCase();
@@ -1653,7 +1728,7 @@
         const start = (dataCurrentPage - 1) * dataRowsPerPage;
         const pagedData = filteredData.reverse().slice(start, start + dataRowsPerPage);
 
-        tbody.innerHTML = pagedData.map((d) => {
+        tbody.innerHTML = pagedData.map((d, i) => {
             let inputDurStr = '-';
             let valDurStr = '-';
             
@@ -1678,7 +1753,7 @@
             }
 
             return `
-                <tr>
+                <tr class="${i === focusedRowIndex ? 'focused-row' : ''}" onclick="focusedRowIndex = ${i}; highlightRow();">
                     <td><input type="checkbox" class="val-checkbox" data-id="${d.id}"></td>
                     <td>${d.dateInput || '-'}</td>
                     <td>${d.timeInput || '-'}</td>
@@ -1822,6 +1897,11 @@
             ? validationData.filter(d => d.sku === targetSku).map(d => d.id)
             : selectedValidationIds;
 
+        if (newStatus === 'On-going' && !newValidator) {
+            showToast("Cannot set status to On-going: You must select a validator who is currently on duty.", "danger");
+            return;
+        }
+
         if (idsToUpdate.length === 0) {
             showToast("No records found to update. Select rows or enter a valid SKU.", "danger");
             return;
@@ -1832,8 +1912,13 @@
                         now.getMinutes().toString().padStart(2, '0');
 
         let updatedCount = 0;
+        let skippedCount = 0;
         validationData = validationData.map(item => {
             if (idsToUpdate.includes(item.id)) {
+                if (newStatus === 'Completed' && item.icStatus !== 'On-going') {
+                    skippedCount++;
+                    return item;
+                }
                 updatedCount++;
                 if (newStatus) {
                     item.icStatus = newStatus;
@@ -1859,7 +1944,9 @@
         });
 
         await db.set('validationData', validationData);
-        showToast(`Successfully updated ${updatedCount} records.`);
+        let msg = `Successfully updated ${updatedCount} records.`;
+        if (skippedCount > 0) msg += ` ${skippedCount} items skipped (must be On-going to complete).`;
+        showToast(msg, skippedCount > 0 ? 'info' : 'success');
         toggleBulkUpdateModal(false);
         document.getElementById('select-all-val').checked = false;
         selectedValidationIds = [];
@@ -1960,6 +2047,7 @@
 
     function changeDataPage(page) {
         dataCurrentPage = page;
+        focusedRowIndex = -1;
         renderValidationTable();
     }
 
@@ -1987,9 +2075,19 @@
                 renderValidationTable();
                 updateDashboard();
             } else if (newStatus === 'On-going') {
+                if (getOnDutyUsersList().length === 0) {
+                    showToast("Action Denied: No users are currently Clocked In. Validation requires an active validator.", "danger");
+                    renderValidationTable(); // Reset dropdown in table
+                    return;
+                }
                 currentAssignmentId = id;
                 toggleAssignmentModal(true);
             } else if (newStatus === 'Completed') {
+                if (item.icStatus !== 'On-going') {
+                    showToast("Workflow Error: This task must be set to 'On-going' before it can be marked as 'Completed'.", "danger");
+                    renderValidationTable();
+                    return;
+                }
                 currentCompletionId = id;
                 document.getElementById('comp-remarks').value = (item.icRem === 'On-going' || item.icRem === 'Pending' || !item.icRem) ? '' : item.icRem;
                 document.getElementById('comp-disposition').value = item.disposition === 'Pending' ? '' : item.disposition;
@@ -1999,6 +2097,10 @@
     }
 
     function openSkuAssignment(sku) {
+        if (getOnDutyUsersList().length === 0) {
+            showToast("Assignment Failed: No users are currently Clocked In.", "danger");
+            return;
+        }
         currentAssignmentSku = sku;
         const globalStart = document.getElementById('global-start').value;
         const globalEnd = document.getElementById('global-end').value;
@@ -2832,6 +2934,7 @@
             // Initial Lock and Timer Setup
             lockApp();
             resetInactivityTimer();
+            document.addEventListener('keydown', handleTableKeyDown);
 
             setDefaultGlobalDates();
             updateDashboard();
