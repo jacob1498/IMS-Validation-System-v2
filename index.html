@@ -3062,8 +3062,8 @@
                         <div style="position: relative; width: 55px; height: 55px; margin-bottom: 4px;">
                             <img src="${imgUrl}" 
                                  style="width: 100%; height: 100%; object-fit: contain; background: white; border: 1px solid #e2e8f0; border-radius: 6px; cursor: zoom-in;" 
-                                 onclick="zoomImage('${imgUrl}', '${sku}')"
-                                 onerror="this.src='https://via.placeholder.com/55?text=${sku}'">
+                                 onclick="zoomImage(this.src, '${sku}')"
+                                 onerror="this.src='https://via.placeholder.com/150?text=Coming+Soon'">
                             <div style="position: absolute; -top: 5px; -right: 5px; background: ${color}; color: ${color === 'var(--primary)' ? '#1e293b' : 'white'}; 
                                         font-size: 0.6rem; font-weight: 800; min-width: 18px; height: 18px; border-radius: 50%; 
                                         display: flex; align-items: center; justify-content: center; border: 2px solid white;
@@ -3224,7 +3224,7 @@
                             <i data-lucide="zap" style="width:10px; height:10px;"></i> PRIORITY 1
                         </div>` : ''}
                         ${agingBadge}
-                        <img src="${imgUrl}" class="sku-image" alt="SKU Image" style="cursor: zoom-in;" onclick="zoomImage('${imgUrl}', '${item.sku}')" onerror="this.src='https://via.placeholder.com/200?text=${item.sku}'">
+                        <img src="${imgUrl}" class="sku-image" alt="SKU Image" style="cursor: zoom-in;" onclick="zoomImage(this.src, '${item.sku}')" onerror="this.src='https://via.placeholder.com/300?text=Coming+Soon+or+Check+Other+Site'">
                         <div style="width: 100%; text-align: left; border-bottom: 1px solid #eee; padding-bottom: 0.5rem; margin-bottom: 0.5rem;">
                             <span style="font-size: 0.7rem; color: var(--secondary); font-weight: bold;">${activeDashboardTab === 'SKU-level' ? 'TOTAL ORDERS:' : 'ORDER #'} ${activeDashboardTab === 'SKU-level' ? item.orderCount : (item.orderNum || 'N/A')}</span>
                             <div style="font-weight: bold; font-size: 1.1rem;">SKU: ${item.sku}</div>
