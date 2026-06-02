@@ -823,6 +823,15 @@
                 <button onclick="setDataTab('On-going')" id="data-tab-Ongoing">On-going</button>
                 <button onclick="setDataTab('Completed')" id="data-tab-Completed">Completed</button>
                 <button onclick="setDataTab('SKU-level')" id="data-tab-SKUlevel">SKU level</button>
+                <div id="sku-filter-container" style="display: none; align-items: center; gap: 0.5rem; margin-left: auto;">
+                    <span style="font-size: 0.8rem; font-weight: 600; color: var(--secondary);">Filter IC Status:</span>
+                    <select id="sku-status-filter" onchange="handleSkuStatusFilter(this.value)" style="padding: 0.3rem; font-size: 0.85rem; border: 1px solid #cbd5e1; border-radius: 4px;">
+                        <option value="All">All Statuses</option>
+                        <option value="Pending">Pending</option>
+                        <option value="On-going">On-going</option>
+                        <option value="Completed">Completed</option>
+                    </select>
+                </div>
             </div>
             <div class="table-wrapper">
                 <table id="validation-table">
@@ -1146,6 +1155,9 @@
     let activeShiftTab = 'All';
     let activeDashboardTab = 'On-going';
     let activeDispositionTab = 'All';
+    let dataSortCol = null;
+    let dataSortDir = 'asc';
+    let skuStatusFilter = 'All';
     const rowsPerPage = 10;
     
     // Lock Screen State
@@ -1252,9 +1264,37 @@
         const btnId = `data-tab-${tab.replace('-', '')}`;
         const btn = document.getElementById(btnId);
         if (btn) btn.classList.add('active');
+
+        // Show/hide SKU-level specific filter
+        const filterContainer = document.getElementById('sku-filter-container');
+        if (filterContainer) {
+            filterContainer.style.display = (tab === 'SKU-level') ? 'flex' : 'none';
+        }
+
         dataCurrentPage = 1;
         focusedRowIndex = -1;
         renderValidationTable();
+    }
+
+    function handleSkuStatusFilter(val) {
+        skuStatusFilter = val;
+        dataCurrentPage = 1;
+        renderValidationTable();
+    }
+
+    function handleSort(col) {
+        if (dataSortCol === col) {
+            dataSortDir = dataSortDir === 'asc' ? 'desc' : 'asc';
+        } else {
+            dataSortCol = col;
+            dataSortDir = 'asc';
+        }
+        renderValidationTable();
+    }
+
+    function getSortIcon(col) {
+        if (dataSortCol !== col) return ' <i data-lucide="chevrons-up-down" style="width:10px; opacity:0.3"></i>';
+        return dataSortDir === 'asc' ? ' <i data-lucide="chevron-up" style="width:10px"></i>' : ' <i data-lucide="chevron-down" style="width:10px"></i>';
     }
 
     const usersPerPage = 5;
@@ -1835,12 +1875,55 @@
                 return g;
             });
 
-            thead.innerHTML = `<tr><th><input type="checkbox" id="select-all-skus" onclick="toggleAllSkus(this)"></th><th>Date</th><th>SKU</th><th>Description</th><th>Total Order Count</th><th>With OP Order?</th><th>Total Order Qty</th><th>Total Rejected Qty</th><th>IC Status</th><th>IC Time Status</th><th>IC Remarks</th><th>Time IC Remarks</th><th>Validation Duration</th><th>Validated By</th><th>Final Disposition</th></tr>`;
+            // Apply SKU Level IC Status Filter
+            if (skuStatusFilter !== 'All') {
+                filteredData = filteredData.filter(d => d.icStatus === skuStatusFilter);
+            }
+
+            thead.innerHTML = `<tr>
+                <th><input type="checkbox" id="select-all-skus" onclick="toggleAllSkus(this)"></th>
+                <th style="cursor:pointer" onclick="handleSort('dateInput')">Date${getSortIcon('dateInput')}</th>
+                <th style="cursor:pointer" onclick="handleSort('sku')">SKU${getSortIcon('sku')}</th>
+                <th style="cursor:pointer" onclick="handleSort('desc')">Description${getSortIcon('desc')}</th>
+                <th style="cursor:pointer" onclick="handleSort('count')">Total Order Count${getSortIcon('count')}</th>
+                <th style="cursor:pointer" onclick="handleSort('hasOP')">With OP Order?${getSortIcon('hasOP')}</th>
+                <th style="cursor:pointer" onclick="handleSort('totalQty')">Total Order Qty${getSortIcon('totalQty')}</th>
+                <th style="cursor:pointer" onclick="handleSort('totalRej')">Total Rejected Qty${getSortIcon('totalRej')}</th>
+                <th style="cursor:pointer" onclick="handleSort('icStatus')">IC Status${getSortIcon('icStatus')}</th>
+                <th style="cursor:pointer" onclick="handleSort('timeICStatus')">IC Time Status${getSortIcon('timeICStatus')}</th>
+                <th style="cursor:pointer" onclick="handleSort('icRem')">IC Remarks${getSortIcon('icRem')}</th>
+                <th style="cursor:pointer" onclick="handleSort('timeICRem')">Time IC Remarks${getSortIcon('timeICRem')}</th>
+                <th style="cursor:pointer" onclick="handleSort('totalDur')">Validation Duration${getSortIcon('totalDur')}</th>
+                <th style="cursor:pointer" onclick="handleSort('validatorStr')">Validated By${getSortIcon('validatorStr')}</th>
+                <th style="cursor:pointer" onclick="handleSort('disposition')">Final Disposition${getSortIcon('disposition')}</th>
+            </tr>`;
         } else {
-            thead.innerHTML = `<tr><th><input type="checkbox" id="select-all-val" onclick="toggleAllValidation(this)"></th><th>Date Input</th><th>Time Input</th><th>Order Date</th><th>Order Number</th><th>Platform</th><th>Sku</th><th>Description</th><th>Order Qty</th><th>Rejected Qty</th><th>Replen Remarks</th><th>IC Status</th><th>Time IC Status</th><th>IC Remarks</th><th>Time IC Remarks</th><th>Input Duration</th><th>Validation Duration</th><th>Validated by (IC Validator)</th><th>Final Disposition</th><th class="text-center">Action</th></tr>`;
             if (activeDataTab !== 'All') {
                 filteredData = filteredData.filter(d => (d.icStatus || 'Pending').toLowerCase() === activeDataTab.toLowerCase());
             }
+
+            thead.innerHTML = `<tr>
+                <th><input type="checkbox" id="select-all-val" onclick="toggleAllValidation(this)"></th>
+                <th style="cursor:pointer" onclick="handleSort('dateInput')">Date Input${getSortIcon('dateInput')}</th>
+                <th style="cursor:pointer" onclick="handleSort('timeInput')">Time Input${getSortIcon('timeInput')}</th>
+                <th style="cursor:pointer" onclick="handleSort('orderDate')">Order Date${getSortIcon('orderDate')}</th>
+                <th style="cursor:pointer" onclick="handleSort('orderNum')">Order Number${getSortIcon('orderNum')}</th>
+                <th style="cursor:pointer" onclick="handleSort('platform')">Platform${getSortIcon('platform')}</th>
+                <th style="cursor:pointer" onclick="handleSort('sku')">Sku${getSortIcon('sku')}</th>
+                <th style="cursor:pointer" onclick="handleSort('desc')">Description${getSortIcon('desc')}</th>
+                <th style="cursor:pointer" onclick="handleSort('orderQty')">Order Qty${getSortIcon('orderQty')}</th>
+                <th style="cursor:pointer" onclick="handleSort('rejQty')">Rejected Qty${getSortIcon('rejQty')}</th>
+                <th style="cursor:pointer" onclick="handleSort('replenRem')">Replen Remarks${getSortIcon('replenRem')}</th>
+                <th style="cursor:pointer" onclick="handleSort('icStatus')">IC Status${getSortIcon('icStatus')}</th>
+                <th style="cursor:pointer" onclick="handleSort('timeICStatus')">Time IC Status${getSortIcon('timeICStatus')}</th>
+                <th style="cursor:pointer" onclick="handleSort('icRem')">IC Remarks${getSortIcon('icRem')}</th>
+                <th style="cursor:pointer" onclick="handleSort('timeICRem')">Time IC Remarks${getSortIcon('timeICRem')}</th>
+                <th style="cursor:pointer" onclick="handleSort('inputDur')">Input Duration${getSortIcon('inputDur')}</th>
+                <th style="cursor:pointer" onclick="handleSort('valDur')">Validation Duration${getSortIcon('valDur')}</th>
+                <th style="cursor:pointer" onclick="handleSort('validator')">Validated by${getSortIcon('validator')}</th>
+                <th style="cursor:pointer" onclick="handleSort('disposition')">Final Disposition${getSortIcon('disposition')}</th>
+                <th class="text-center">Action</th>
+            </tr>`;
         }
 
         // Search Filter
@@ -1870,12 +1953,54 @@
             return;
         }
 
+        // Pre-calculate derived fields for sorting if not SKU-level
+        if (activeDataTab !== 'SKU-level') {
+            const now = new Date();
+            const nowStr = now.getHours().toString().padStart(2, '0') + ':' + now.getMinutes().toString().padStart(2, '0');
+            filteredData.forEach(d => {
+                const diffIn = calculateDurationMinutes(d.timeInput, d.timeICStatus);
+                d.inputDurVal = diffIn !== null ? diffIn : -1;
+                
+                let endTime = d.timeICRem || (d.icStatus === 'On-going' ? nowStr : null);
+                const diffVal = calculateDurationMinutes(d.timeICStatus, endTime);
+                d.valDurVal = diffVal !== null ? diffVal : -1;
+            });
+        }
+
+        // Apply Sorting
+        if (dataSortCol) {
+            filteredData.sort((a, b) => {
+                let valA = a[dataSortCol];
+                let valB = b[dataSortCol];
+
+                // Mapping for duration fields
+                if (dataSortCol === 'inputDur') { valA = a.inputDurVal; valB = b.inputDurVal; }
+                if (dataSortCol === 'valDur') { valA = a.valDurVal; valB = b.valDurVal; }
+                
+                // Numeric coercion for Qty and Count
+                if (['orderQty', 'rejQty', 'count', 'totalQty', 'totalRej', 'totalDur'].includes(dataSortCol)) {
+                    valA = parseFloat(valA) || 0;
+                    valB = parseFloat(valB) || 0;
+                } else {
+                    // String comparison
+                    valA = String(valA || '').toLowerCase();
+                    valB = String(valB || '').toLowerCase();
+                }
+
+                if (valA < valB) return dataSortDir === 'asc' ? -1 : 1;
+                if (valA > valB) return dataSortDir === 'asc' ? 1 : -1;
+                return 0;
+            });
+        } else if (activeDataTab !== 'SKU-level') {
+            filteredData.reverse(); // Default: Newest first
+        }
+
         const totalPages = Math.ceil(filteredData.length / dataRowsPerPage) || 1;
         if (dataCurrentPage > totalPages) dataCurrentPage = totalPages;
         if (dataCurrentPage < 1) dataCurrentPage = 1;
 
         const start = (dataCurrentPage - 1) * dataRowsPerPage;
-        const pagedData = (activeDataTab === 'SKU-level' ? filteredData : filteredData.reverse()).slice(start, start + dataRowsPerPage);
+        const pagedData = filteredData.slice(start, start + dataRowsPerPage);
 
         tbody.innerHTML = pagedData.map((d, i) => {
             if (activeDataTab === 'SKU-level') {
