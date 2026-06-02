@@ -1,0 +1,88 @@
+=========================================================
+SUPABASE SETUP INSTRUCTIONS FOR VALIDATION TRACKING SYSTEM
+=========================================================
+
+Follow these steps to enable cloud synchronization for your application.
+
+STEP 1: CREATE YOUR PROJECT
+---------------------------
+1. Log in to https://supabase.com/
+2. Create a "New Project".
+3. Give it a name (e.g., "Validation Tracker") and set a secure database password.
+
+STEP 2: CREATE THE DATABASE TABLE
+---------------------------------
+1. In the Supabase sidebar, click on "SQL Editor".
+2. Click "New Query".
+3. Paste the following SQL code and click "Run":
+
+-- SQL START --
+-- 1. Table for General Settings (Users, Remarks)
+CREATE TABLE app_settings (
+    key TEXT PRIMARY KEY,
+    value JSONB,
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- 2. Table for Attendance Logs
+CREATE TABLE logs (
+    id BIGINT PRIMARY KEY,
+    timestamp TIMESTAMPTZ DEFAULT NOW(),
+    "userId" TEXT,
+    "userName" TEXT,
+    action TEXT,
+    shift TEXT
+);
+
+-- 3. Table for Validation Records
+CREATE TABLE validation_data (
+    id BIGINT PRIMARY KEY,
+    "dateInput" TEXT,
+    "timeInput" TEXT,
+    "orderDate" TEXT,
+    "orderNum" TEXT,
+    platform TEXT,
+    sku TEXT,
+    "desc" TEXT,
+    "orderQty" NUMERIC,
+    "rejQty" NUMERIC,
+    "replenRem" TEXT,
+    "icStatus" TEXT,
+    "timeICStatus" TEXT,
+    "icRem" TEXT,
+    "timeICRem" TEXT,
+    validator TEXT,
+    disposition TEXT
+);
+
+-- Enable Row Level Security (RLS) on all tables
+ALTER TABLE app_settings ENABLE ROW LEVEL SECURITY;
+ALTER TABLE logs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE validation_data ENABLE ROW LEVEL SECURITY;
+
+-- Create simple public access policies (read/write for all)
+CREATE POLICY "Allow public access" ON app_settings FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Allow public access" ON logs FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Allow public access" ON validation_data FOR ALL USING (true) WITH CHECK (true);
+-- SQL END --
+
+STEP 3: GET YOUR API CREDENTIALS
+--------------------------------
+1. Click on "Project Settings" (gear icon) in the sidebar.
+2. Go to "API".
+3. Copy the "Project URL".
+4. Copy the "anon" public API key.
+
+STEP 4: UPDATE YOUR HTML FILE
+-----------------------------
+1. Open your 'index.html' file.
+2. Locate these variables in the <script> section:
+   const SUPABASE_URL = 'YOUR_SUPABASE_URL';
+   const SUPABASE_ANON_KEY = 'YOUR_SUPABASE_ANON_KEY';
+3. Replace the placeholder text with the credentials you copied in Step 3.
+
+NOTES:
+------
+- This setup uses a single-table approach to sync your Users, Logs, and Validation Data.
+- All data is stored as JSON objects, allowing for flexible updates across multiple devices.
+- Ensure you save your file and refresh your browser to begin syncing.

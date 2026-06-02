@@ -687,9 +687,12 @@
                     <button onclick="setDashboardTab('On-going')" id="dash-tab-Ongoing" class="active">On-going</button>
                     <button onclick="setDashboardTab('Pending')" id="dash-tab-Pending">Pending</button>
                     <button onclick="setDashboardTab('Completed')" id="dash-tab-Completed">Completed</button>
+                    <button onclick="setDashboardTab('SKU-level')" id="dash-tab-SKUlevel">SKU level</button>
                 </div>
                 <div id="completed-dispo-tabs" style="display: none; gap: 0.8rem; margin-top: 0.5rem; padding-left: 0.5rem; align-items: center;">
                     <button onclick="setDispositionTab('All')" id="dispo-tab-All" style="background: none; border: none; font-size: 0.7rem; font-weight: 700; cursor: pointer; color: var(--primary); border-bottom: 2px solid var(--primary); padding: 0 4px;">ALL</button>
+                    <button onclick="setDispositionTab('Pending')" id="dispo-tab-Pending" style="background: none; border: none; font-size: 0.7rem; font-weight: 700; cursor: pointer; color: var(--secondary); padding: 0 4px; display: none;">PENDING</button>
+                    <button onclick="setDispositionTab('On-going')" id="dispo-tab-Ongoing" style="background: none; border: none; font-size: 0.7rem; font-weight: 700; cursor: pointer; color: var(--secondary); padding: 0 4px; display: none;">ON-GOING</button>
                     <button onclick="setDispositionTab('Proceed Orders')" id="dispo-tab-Proceed" style="background: none; border: none; font-size: 0.7rem; font-weight: 700; cursor: pointer; color: var(--secondary); padding: 0 4px;">PROCEED ORDERS</button>
                     <button onclick="setDispositionTab('For Cancellation')" id="dispo-tab-Cancel" style="background: none; border: none; font-size: 0.7rem; font-weight: 700; cursor: pointer; color: var(--secondary); padding: 0 4px;">FOR CANCELLATION</button>
                     <button onclick="setDispositionTab('For Disposition')" id="dispo-tab-Dispo" style="background: none; border: none; font-size: 0.7rem; font-weight: 700; cursor: pointer; color: var(--secondary); padding: 0 4px;">FOR DISPOSITION</button>
@@ -819,6 +822,7 @@
                 <button onclick="setDataTab('Pending')" id="data-tab-Pending">Pending</button>
                 <button onclick="setDataTab('On-going')" id="data-tab-Ongoing">On-going</button>
                 <button onclick="setDataTab('Completed')" id="data-tab-Completed">Completed</button>
+                <button onclick="setDataTab('SKU-level')" id="data-tab-SKUlevel">SKU level</button>
             </div>
             <div class="table-wrapper">
                 <table id="validation-table">
@@ -1138,6 +1142,7 @@
     let currentAssignmentSku = null;
     let supercodeAction = ''; // Track what the supercode is for
     let selectedValidationIds = [];
+    let selectedSkus = [];
     let activeShiftTab = 'All';
     let activeDashboardTab = 'On-going';
     let activeDispositionTab = 'All';
@@ -1211,9 +1216,14 @@
             } else if (e.key === ' ') {
                 if (focusedRowIndex >= 0 && focusedRowIndex < rows.length) {
                     e.preventDefault();
-                    const checkbox = rows[focusedRowIndex].querySelector('.val-checkbox');
+                    const checkbox = rows[focusedRowIndex].querySelector('.val-checkbox, .sku-checkbox');
                     if (checkbox) {
                         checkbox.checked = !checkbox.checked;
+                        if (checkbox.classList.contains('val-checkbox')) {
+                            toggleValidationSelection(parseInt(checkbox.dataset.id), checkbox.checked);
+                        } else if (checkbox.classList.contains('sku-checkbox')) {
+                            toggleSkuSelection(checkbox.dataset.sku, checkbox.checked);
+                        }
                     }
                 }
             }
@@ -1275,9 +1285,9 @@
 
     // Helper to normalize dates to YYYY-MM-DD for reliable filtering
     function normalizeDate(dateStr) {
-        if (!dateStr) return '';
-        // Take only the date part in case there's a timestamp, then trim
-        let clean = dateStr.toString().split(' ')[0].trim().replace(/['"]/g, '');
+        if (dateStr === undefined || dateStr === null) return '';
+        // Take only the date part in case there's a timestamp, trim everything
+        let clean = dateStr.toString().split(' ')[0].trim().replace(/['"\u200B-\u200D\uFEFF]/g, '');
         if (clean === '-' || clean === '') return '';
         
         // If already YYYY-MM-DD, return as is
@@ -1502,10 +1512,30 @@
         const btnId = `dash-tab-${tab.replace('-', '')}`;
         document.getElementById(btnId).classList.add('active');
 
+        // Reset sub-tab selection to 'All'
+        activeDispositionTab = 'All';
+
         // Handle disposition sub-tabs visibility
         const dispoContainer = document.getElementById('completed-dispo-tabs');
         if (dispoContainer) {
-            dispoContainer.style.display = (tab === 'Completed') ? 'flex' : 'none';
+            dispoContainer.style.display = (tab === 'Completed' || tab === 'SKU-level') ? 'flex' : 'none';
+            
+            // Sync UI highlighting for the 'All' subtab
+            dispoContainer.querySelectorAll('button').forEach(btn => {
+                btn.style.color = 'var(--secondary)';
+                btn.style.borderBottom = 'none';
+            });
+            const allBtn = document.getElementById('dispo-tab-All');
+            if (allBtn) {
+                allBtn.style.color = 'var(--primary)';
+                allBtn.style.borderBottom = '2px solid var(--primary)';
+            }
+
+            // Show/Hide Pending/Ongoing subtabs only for SKU-level
+            const pendingSub = document.getElementById('dispo-tab-Pending');
+            const ongoingSub = document.getElementById('dispo-tab-Ongoing');
+            if (pendingSub) pendingSub.style.display = (tab === 'SKU-level') ? 'inline-block' : 'none';
+            if (ongoingSub) ongoingSub.style.display = (tab === 'SKU-level') ? 'inline-block' : 'none';
         }
 
         updateDashboard();
@@ -1525,7 +1555,9 @@
             'All': 'dispo-tab-All',
             'Proceed Orders': 'dispo-tab-Proceed',
             'For Cancellation': 'dispo-tab-Cancel',
-            'For Disposition': 'dispo-tab-Dispo'
+            'For Disposition': 'dispo-tab-Dispo',
+            'Pending': 'dispo-tab-Pending',
+            'On-going': 'dispo-tab-Ongoing'
         };
         
         const activeBtn = document.getElementById(btnMap[subTab]);
@@ -1709,14 +1741,18 @@
     }
 
     function renderValidationTable() {
+        const thead = document.querySelector('#validation-table thead');
         const tbody = document.querySelector('#validation-table tbody');
-        if (!tbody) return;
+        if (!tbody || !thead) return;
 
         let filteredData = [...validationData];
 
         // Global Date Filter
         const globalStart = document.getElementById('global-start').value;
         const globalEnd = document.getElementById('global-end').value;
+
+        const onDuty = getOnDutyUsersList();
+        const validatorOptions = `<option value="">Select...</option>` + onDuty.map(u => `<option value="${u.name}">${u.name}</option>`).join('');
 
         if (globalStart || globalEnd) {
             filteredData = filteredData.filter(d => {
@@ -1728,9 +1764,83 @@
             });
         }
 
-        // Status Tab Filter
-        if (activeDataTab !== 'All') {
-            filteredData = filteredData.filter(d => (d.icStatus || 'Pending').toLowerCase() === activeDataTab.toLowerCase());
+        // Tab Filtering & Grouping
+        if (activeDataTab === 'SKU-level') {
+            const grouped = {};
+            filteredData.forEach(d => {
+                if (!d.sku) return;
+                if (!grouped[d.sku]) {
+                    grouped[d.sku] = {
+                        dateInput: d.dateInput,
+                        sku: d.sku,
+                        desc: d.desc,
+                        count: 0,
+                        hasOP: false,
+                        totalQty: 0,
+                        totalRej: 0,
+                        icStatus: 'Pending',
+                        timeICStatus: '',
+                        icRem: '',
+                        timeICRem: '',
+                        totalDur: 0,
+                        validators: new Set(),
+                        disposition: '',
+                        items: []
+                    };
+                }
+                const g = grouped[d.sku];
+                g.items.push(d);
+                g.count++;
+                if ((d.platform || '').toUpperCase() === 'OP') g.hasOP = true;
+                g.totalQty += (parseFloat(d.orderQty) || 0);
+                g.totalRej += (parseFloat(d.rejQty) || 0);
+                if (d.validator) g.validators.add(d.validator);
+            });
+
+            const today = new Date().toISOString().split('T')[0];
+            const nowTimeStr = new Date().getHours().toString().padStart(2, '0') + ':' + new Date().getMinutes().toString().padStart(2, '0');
+
+            filteredData = Object.values(grouped).map(g => {
+                const statuses = g.items.map(i => (i.icStatus || 'Pending').toLowerCase());
+                if (statuses.includes('pending')) g.icStatus = 'Pending';
+                else if (statuses.includes('on-going')) g.icStatus = 'On-going';
+                else g.icStatus = 'Completed';
+
+                const sorted = [...g.items].sort((a,b) => {
+                    const dtA = new Date(`${a.dateInput}T${a.timeInput || '00:00'}`);
+                    const dtB = new Date(`${b.dateInput}T${b.timeInput || '00:00'}`);
+                    return dtB - dtA;
+                });
+                const latest = sorted[0];
+                
+                g.timeICStatus = latest.timeICStatus;
+                g.icRem = latest.icRem;
+                g.timeICRem = latest.timeICRem;
+                g.disposition = latest.disposition;
+                g.dateInput = latest.dateInput;
+                
+                let totalMin = 0;
+                g.items.forEach(i => {
+                    let endTime = i.timeICRem;
+                    if (i.icStatus === 'On-going') endTime = nowTimeStr;
+                    const diff = calculateDurationMinutes(i.timeICStatus, endTime);
+                    if (diff !== null) totalMin += diff;
+                });
+                g.totalDur = totalMin;
+                g.validatorStr = Array.from(g.validators).join(', ');
+
+                const normalizedDateInput = normalizeDate(g.dateInput);
+                g.displayDate = (normalizedDateInput && normalizedDateInput < today) ? `${g.dateInput} (Pending)` : g.dateInput;
+
+                return g;
+            });
+
+            thead.innerHTML = `<tr><th><input type="checkbox" id="select-all-skus" onclick="toggleAllSkus(this)"></th><th>Date</th><th>SKU</th><th>Description</th><th>Total Order Count</th><th>With OP Order?</th><th>Total Order Qty</th><th>Total Rejected Qty</th><th>IC Status</th><th>IC Time Status</th><th>IC Remarks</th><th>Time IC Remarks</th><th>Validation Duration</th><th>Validated By</th><th>Final Disposition</th></tr>`;
+        } else {
+            thead.innerHTML = `<tr><th><input type="checkbox" id="select-all-val" onclick="toggleAllValidation(this)"></th><th>Date Input</th><th>Time Input</th><th>Order Date</th><th>Order Number</th><th>Platform</th><th>Sku</th><th>Description</th><th>Order Qty</th><th>Rejected Qty</th><th>Replen Remarks</th><th>IC Status</th><th>Time IC Status</th><th>IC Remarks</th><th>Time IC Remarks</th><th>Input Duration</th><th>Validation Duration</th><th>Validated by (IC Validator)</th><th>Final Disposition</th><th class="text-center">Action</th></tr>`;
+            if (activeDataTab !== 'All') {
+                filteredData = filteredData.filter(d => (d.icStatus || 'Pending').toLowerCase() === activeDataTab.toLowerCase());
+            }
         }
 
         // Search Filter
@@ -1765,9 +1875,48 @@
         if (dataCurrentPage < 1) dataCurrentPage = 1;
 
         const start = (dataCurrentPage - 1) * dataRowsPerPage;
-        const pagedData = filteredData.reverse().slice(start, start + dataRowsPerPage);
+        const pagedData = (activeDataTab === 'SKU-level' ? filteredData : filteredData.reverse()).slice(start, start + dataRowsPerPage);
 
         tbody.innerHTML = pagedData.map((d, i) => {
+            if (activeDataTab === 'SKU-level') {
+                const h = Math.floor(d.totalDur / 60);
+                const m = Math.floor(d.totalDur % 60);
+                const durStr = d.totalDur > 0 ? `${h}h ${m}m` : '-';
+                
+                const currentValidator = Array.from(d.validators)[0] || '';
+                const validatorSelect = `<select onchange="updateSkuMetadata('${d.sku}', 'validator', this.value)" style="font-size:0.75rem; width:100px;">
+                    <option value="">Select...</option>${onDuty.map(u => `<option value="${u.name}" ${u.name === currentValidator ? 'selected' : ''}>${u.name}</option>`).join('')}</select>`;
+
+                return `
+                    <tr class="${i === focusedRowIndex ? 'focused-row' : ''}" onclick="focusedRowIndex = ${i}; highlightRow();">
+                        <td><input type="checkbox" class="sku-checkbox" data-sku="${d.sku}" ${selectedSkus.includes(d.sku) ? 'checked' : ''} onchange="toggleSkuSelection('${d.sku}', this.checked)"></td>
+                        <td>${d.displayDate || '-'}</td>
+                        <td>${d.sku || '-'}</td>
+                        <td>${d.desc || '-'}</td>
+                        <td>${d.count || '0'}</td>
+                        <td>${d.hasOP ? 'Y' : 'N'}</td>
+                        <td>${d.totalQty || '0'}</td>
+                        <td>${d.totalRej || '0'}</td>
+                        <td>
+                            <select onchange="updateSkuStatus('${d.sku}', this.value)" style="font-size:0.75rem; border:1px solid #cbd5e1; border-radius:4px;">
+                                <option value="Pending" ${d.icStatus === 'Pending' ? 'selected' : ''}>Pending</option>
+                                <option value="On-going" ${d.icStatus === 'On-going' ? 'selected' : ''}>On-going</option>
+                                <option value="Completed" ${d.icStatus === 'Completed' ? 'selected' : ''}>Completed</option>
+                            </select>
+                        </td>
+                        <td>${d.timeICStatus || '-'}</td>
+                        <td>
+                            <input type="text" value="${d.icRem || ''}" list="ic-remarks-list" onchange="updateSkuMetadata('${d.sku}', 'icRem', this.value)" style="font-size:0.75rem; width:120px;">
+                        </td>
+                        <td>${d.timeICRem || '-'}</td>
+                        <td><strong>${durStr}</strong></td>
+                        <td>${validatorSelect}</td>
+                        <td>
+                            <input type="text" value="${d.disposition || ''}" list="dispo-remarks-list" onchange="updateSkuMetadata('${d.sku}', 'disposition', this.value)" style="font-size:0.75rem; width:120px;">
+                        </td>
+                    </tr>`;
+            }
+
             let inputDurStr = '-';
             let valDurStr = '-';
             
@@ -1793,7 +1942,7 @@
 
             return `
                 <tr class="${i === focusedRowIndex ? 'focused-row' : ''}" onclick="focusedRowIndex = ${i}; highlightRow();">
-                    <td><input type="checkbox" class="val-checkbox" data-id="${d.id}"></td>
+                    <td><input type="checkbox" class="val-checkbox" data-id="${d.id}" ${selectedValidationIds.includes(d.id) ? 'checked' : ''} onchange="toggleValidationSelection(${d.id}, this.checked)"></td>
                     <td>${d.dateInput || '-'}</td>
                     <td>${d.timeInput || '-'}</td>
                     <td>${d.orderDate || '-'}</td>
@@ -1835,6 +1984,21 @@
                 </tr>
             `;
         }).join('');
+
+        // Update Select All checkbox state for the current page
+        const selectAllHeader = document.getElementById('select-all-val');
+        if (selectAllHeader && pagedData.length > 0) {
+            selectAllHeader.checked = pagedData.every(d => selectedValidationIds.includes(d.id));
+        } else if (selectAllHeader) {
+            selectAllHeader.checked = false;
+        }
+
+        const selectAllSkusHeader = document.getElementById('select-all-skus');
+        if (selectAllSkusHeader && pagedData.length > 0 && activeDataTab === 'SKU-level') {
+            selectAllSkusHeader.checked = pagedData.every(d => selectedSkus.includes(d.sku));
+        } else if (selectAllSkusHeader) {
+            selectAllSkusHeader.checked = false;
+        }
 
         renderDataPagination(totalPages);
         lucide.createIcons();
@@ -1878,16 +2042,52 @@
 
     function toggleAllValidation(source) {
         const checkboxes = document.querySelectorAll('.val-checkbox');
-        checkboxes.forEach(cb => cb.checked = source.checked);
+        checkboxes.forEach(cb => {
+            cb.checked = source.checked;
+            toggleValidationSelection(parseInt(cb.dataset.id), source.checked);
+        });
+    }
+
+    function toggleAllSkus(source) {
+        const checkboxes = document.querySelectorAll('.sku-checkbox');
+        checkboxes.forEach(cb => {
+            cb.checked = source.checked;
+            toggleSkuSelection(cb.dataset.sku, source.checked);
+        });
+    }
+
+    function toggleSkuSelection(sku, isChecked) {
+        if (isChecked) {
+            if (!selectedSkus.includes(sku)) selectedSkus.push(sku);
+        } else {
+            selectedSkus = selectedSkus.filter(s => s !== sku);
+        }
+        const selectAllSkusHeader = document.getElementById('select-all-skus');
+        const visibleCheckboxes = document.querySelectorAll('.sku-checkbox');
+        if (selectAllSkusHeader && visibleCheckboxes.length > 0) {
+            selectAllSkusHeader.checked = Array.from(visibleCheckboxes).every(cb => selectedSkus.includes(cb.dataset.sku));
+        }
+    }
+
+    function toggleValidationSelection(id, isChecked) {
+        if (isChecked) {
+            if (!selectedValidationIds.includes(id)) selectedValidationIds.push(id);
+        } else {
+            selectedValidationIds = selectedValidationIds.filter(sid => sid !== id);
+        }
     }
 
     function bulkDeleteValidation() {
-        const checkboxes = document.querySelectorAll('.val-checkbox:checked');
-        selectedValidationIds = Array.from(checkboxes).map(cb => parseInt(cb.getAttribute('data-id')));
-        
-        if (selectedValidationIds.length === 0) {
-            showToast("No entries selected for deletion.", "info");
-            return;
+        if (activeDataTab === 'SKU-level') {
+            if (selectedSkus.length === 0) {
+                showToast("No SKUs selected for deletion.", "info");
+                return;
+            }
+        } else {
+            if (selectedValidationIds.length === 0) {
+                showToast("No entries selected for deletion.", "info");
+                return;
+            }
         }
         
         supercodeAction = 'bulk-delete-validation';
@@ -1908,12 +2108,18 @@
     }
 
     function openBulkUpdate() {
-        const checkboxes = document.querySelectorAll('.val-checkbox:checked');
-        selectedValidationIds = Array.from(checkboxes).map(cb => parseInt(cb.getAttribute('data-id')));
-        
-        document.getElementById('bulk-update-count').innerText = selectedValidationIds.length > 0 
-            ? `Updating ${selectedValidationIds.length} selected records` 
-            : "No records selected. Provide a SKU below to target specific items.";
+        if (activeDataTab === 'SKU-level') {
+            document.getElementById('bulk-update-count').innerText = selectedSkus.length > 0 
+                ? `Updating all orders for ${selectedSkus.length} selected SKUs` 
+                : "No SKUs selected. Provide a SKU below to target specific items.";
+        } else {
+            const checkboxes = document.querySelectorAll('.val-checkbox:checked');
+            selectedValidationIds = Array.from(checkboxes).map(cb => parseInt(cb.getAttribute('data-id')));
+            
+            document.getElementById('bulk-update-count').innerText = selectedValidationIds.length > 0 
+                ? `Updating ${selectedValidationIds.length} selected records` 
+                : "No records selected. Provide a SKU below to target specific items.";
+        }
         
         // Reset fields for fresh update
         document.getElementById('bulk-target-sku').value = '';
@@ -1932,9 +2138,20 @@
         const newDispo = document.getElementById('bulk-disposition').value.trim();
         const newValidator = document.getElementById('bulk-validator').value;
 
-        const idsToUpdate = targetSku 
-            ? validationData.filter(d => d.sku === targetSku).map(d => d.id)
-            : selectedValidationIds;
+        let idsToUpdate = [];
+        if (targetSku) {
+            idsToUpdate = validationData.filter(d => d.sku === targetSku).map(d => d.id);
+        } else if (activeDataTab === 'SKU-level') {
+            const globalStart = document.getElementById('global-start').value;
+            const globalEnd = document.getElementById('global-end').value;
+            idsToUpdate = validationData.filter(d => {
+                const entryDate = normalizeDate(d.dateInput);
+                const dateMatch = (!globalStart || entryDate >= globalStart) && (!globalEnd || entryDate <= globalEnd);
+                return selectedSkus.includes(d.sku) && dateMatch;
+            }).map(d => d.id);
+        } else {
+            idsToUpdate = selectedValidationIds;
+        }
 
         if (newStatus === 'On-going' && !newValidator) {
             showToast("Cannot set status to On-going: You must select a validator who is currently on duty.", "danger");
@@ -1987,8 +2204,13 @@
         if (skippedCount > 0) msg += ` ${skippedCount} items skipped (must be On-going to complete).`;
         showToast(msg, skippedCount > 0 ? 'info' : 'success');
         toggleBulkUpdateModal(false);
-        document.getElementById('select-all-val').checked = false;
-        selectedValidationIds = [];
+        if (activeDataTab === 'SKU-level') {
+            selectedSkus = [];
+            if (document.getElementById('select-all-skus')) document.getElementById('select-all-skus').checked = false;
+        } else {
+            selectedValidationIds = [];
+            if (document.getElementById('select-all-val')) document.getElementById('select-all-val').checked = false;
+        }
         renderValidationTable();
         updateDashboard();
     }
@@ -2133,6 +2355,59 @@
                 toggleCompletionModal(true);
             }
         }
+    }
+
+    async function updateSkuStatus(sku, newStatus) {
+        if (newStatus === 'On-going') {
+            openSkuAssignment(sku);
+        } else if (newStatus === 'Completed') {
+            // Use the same SKU assignment modal style but for completion
+            const validator = getOnDutyUsersList().length > 0 ? getOnDutyUsersList()[0].name : '';
+            bulkUpdateSku(sku, { icStatus: 'Completed', validator: validator });
+        } else {
+            bulkUpdateSku(sku, { icStatus: 'Pending', icRem: 'Pending', disposition: 'Pending', timeICStatus: '', timeICRem: '' });
+        }
+    }
+
+    async function updateSkuMetadata(sku, field, value) {
+        const updates = {};
+        updates[field] = value;
+        if (field === 'icRem') updates.timeICRem = new Date().getHours().toString().padStart(2, '0') + ':' + new Date().getMinutes().toString().padStart(2, '0');
+        bulkUpdateSku(sku, updates);
+    }
+
+    async function bulkUpdateSku(sku, updateObj) {
+        const globalStart = document.getElementById('global-start').value;
+        const globalEnd = document.getElementById('global-end').value;
+        const now = new Date();
+        const timeStr = now.getHours().toString().padStart(2, '0') + ':' + now.getMinutes().toString().padStart(2, '0');
+
+        let count = 0;
+        validationData = validationData.map(item => {
+            const entryDate = normalizeDate(item.dateInput);
+            const dateMatch = (!globalStart || entryDate >= globalStart) && (!globalEnd || entryDate <= globalEnd);
+
+            if (item.sku === sku && dateMatch) {
+                Object.keys(updateObj).forEach(key => {
+                    item[key] = updateObj[key];
+                });
+                
+                // Auto-timestamps based on status changes
+                if (updateObj.icStatus === 'On-going') {
+                    item.timeICStatus = timeStr;
+                } else if (updateObj.icStatus === 'Completed') {
+                    item.timeICRem = timeStr;
+                    if (!item.timeICStatus) item.timeICStatus = timeStr;
+                }
+                count++;
+            }
+            return item;
+        });
+
+        await db.set('validationData', validationData);
+        showToast(`Updated ${count} orders for SKU ${sku}`);
+        renderValidationTable();
+        updateDashboard();
     }
 
     function openSkuAssignment(sku) {
@@ -2328,7 +2603,7 @@
             if (newEntries.length > 0) {
                 validationData = [...validationData, ...newEntries];
                 await db.set('validationData', validationData);
-                renderValidationTable();
+                refreshAllViews();
                 showToast(`Successfully imported ${newEntries.length} entries.`);
             } else {
                 showToast("No valid data found in CSV.", "danger");
@@ -2353,30 +2628,91 @@
     }
 
     function exportValidationToCSV() {
-        let csv = "Date Input,Time Input,Order Date,Order Number,Platform,Sku,Description,Order Qty,Rejected Qty,Replen Remarks,IC Status,Time IC Status,IC Remarks,Time IC Remarks,Input Duration,Validation Duration,Validated by,Final Disposition\n";
-        validationData.forEach(d => {
-            let inDur = '-';
-            const diffIn = calculateDurationMinutes(d.timeInput, d.timeICStatus);
-            if (diffIn !== null) {
-                inDur = `${Math.floor(diffIn / 60)}h ${Math.floor(diffIn % 60)}m`;
-            }
+        const globalStart = document.getElementById('global-start').value;
+        const globalEnd = document.getElementById('global-end').value;
+        const nowTimeStr = new Date().getHours().toString().padStart(2, '0') + ':' + new Date().getMinutes().toString().padStart(2, '0');
+        const today = new Date().toISOString().split('T')[0];
 
-            let valDur = '-';
-            const diffVal = calculateDurationMinutes(d.timeICStatus, d.timeICRem);
-            if (diffVal !== null) {
-                valDur = `${Math.floor(diffVal / 60)}h ${Math.floor(diffVal % 60)}m`;
-            }
-
-            csv += `"${d.dateInput}","${d.timeInput}","${d.orderDate}","${d.orderNum}","${d.platform}","${d.sku}","${d.desc}",${d.orderQty},${d.rejQty},"${d.replenRem}","${d.icStatus}","${d.timeICStatus}","${d.icRem}","${d.timeICRem}","${inDur}","${valDur}","${d.validator}","${d.disposition}"\n`;
+        // 1. Apply Current Filters (Date & Search)
+        let dataToExport = validationData.filter(d => {
+            const entryDate = normalizeDate(d.dateInput);
+            const dateMatch = (!globalStart || entryDate >= globalStart) && (!globalEnd || entryDate <= globalEnd);
+            const searchMatch = !dataSearchTerm || 
+                (d.orderNum && d.orderNum.toLowerCase().includes(dataSearchTerm.toLowerCase())) ||
+                (d.sku && d.sku.toLowerCase().includes(dataSearchTerm.toLowerCase())) ||
+                (d.desc && d.desc.toLowerCase().includes(dataSearchTerm.toLowerCase()));
+            return dateMatch && searchMatch;
         });
+
+        let csv = "";
+        let filename = "";
+
+        if (activeDataTab === 'SKU-level') {
+            // 2a. Smart Logic: SKU Summary Export
+            csv = "Date,SKU,Description,Total Order Count,With OP Order?,Total Order Qty,Total Rejected Qty,IC Status,IC Time Status,IC Remarks,Time IC Remarks,Validation Duration,Validated By,Final Disposition\n";
+            
+            const grouped = {};
+            dataToExport.forEach(d => {
+                if (!d.sku) return;
+                if (!grouped[d.sku]) {
+                    grouped[d.sku] = { sku: d.sku, desc: d.desc, date: d.dateInput, count: 0, hasOP: false, totalQty: 0, totalRej: 0, items: [], validators: new Set() };
+                }
+                const g = grouped[d.sku];
+                g.items.push(d);
+                g.count++;
+                if ((d.platform || '').toUpperCase() === 'OP') g.hasOP = true;
+                g.totalQty += (parseFloat(d.orderQty) || 0);
+                g.totalRej += (parseFloat(d.rejQty) || 0);
+                if (d.validator) g.validators.add(d.validator);
+            });
+
+            Object.values(grouped).forEach(g => {
+                const statuses = g.items.map(i => (i.icStatus || 'Pending').toLowerCase());
+                const icStatus = statuses.includes('pending') ? 'Pending' : statuses.includes('on-going') ? 'On-going' : 'Completed';
+                const sorted = [...g.items].sort((a,b) => new Date(`${b.dateInput}T${b.timeInput || '00:00'}`) - new Date(`${a.dateInput}T${a.timeInput || '00:00'}`));
+                const latest = sorted[0];
+                
+                let totalMin = 0;
+                g.items.forEach(i => {
+                    let endTime = i.timeICRem || (i.icStatus === 'On-going' ? nowTimeStr : null);
+                    const diff = calculateDurationMinutes(i.timeICStatus, endTime);
+                    if (diff !== null) totalMin += diff;
+                });
+
+                const durStr = `${Math.floor(totalMin / 60)}h ${Math.floor(totalMin % 60)}m`;
+                const displayDate = (normalizeDate(g.date) < today) ? `${g.date} (Pending)` : g.date;
+
+                csv += `"${displayDate}","${g.sku}","${g.desc}",${g.count},"${g.hasOP ? 'Y' : 'N'}",${g.totalQty},${g.totalRej},"${icStatus}","${latest.timeICStatus || ''}","${latest.icRem || ''}","${latest.timeICRem || ''}","${durStr}","${Array.from(g.validators).join(', ')}","${latest.disposition || ''}"\n`;
+            });
+            filename = `SKU_Summary_Export_${today}.csv`;
+
+        } else {
+            // 2b. Smart Logic: Filtered Raw Data Export
+            if (activeDataTab !== 'All') {
+                dataToExport = dataToExport.filter(d => (d.icStatus || 'Pending').toLowerCase() === activeDataTab.toLowerCase());
+            }
+
+            csv = "Date Input,Time Input,Order Date,Order Number,Platform,Sku,Description,Order Qty,Rejected Qty,Replen Remarks,IC Status,Time IC Status,IC Remarks,Time IC Remarks,Input Duration,Validation Duration,Validated by,Final Disposition\n";
+            dataToExport.forEach(d => {
+                const diffIn = calculateDurationMinutes(d.timeInput, d.timeICStatus);
+                const inDur = diffIn !== null ? `${Math.floor(diffIn / 60)}h ${Math.floor(diffIn % 60)}m` : '-';
+                
+                let endTime = d.timeICRem || (d.icStatus === 'On-going' ? nowTimeStr : null);
+                const diffVal = calculateDurationMinutes(d.timeICStatus, endTime);
+                const valDur = diffVal !== null ? `${Math.floor(diffVal / 60)}h ${Math.floor(diffVal % 60)}m` : '-';
+
+                csv += `"${d.dateInput}","${d.timeInput}","${d.orderDate}","${d.orderNum}","${d.platform}","${d.sku}","${d.desc}",${d.orderQty},${d.rejQty},"${d.replenRem}","${d.icStatus}","${d.timeICStatus}","${d.icRem}","${d.timeICRem}","${inDur}","${valDur}","${d.validator}","${d.disposition}"\n`;
+            });
+            filename = `Validation_Export_${activeDataTab}_${today}.csv`;
+        }
 
         const blob = new Blob([csv], { type: 'text/csv' });
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `Validation_Data_${new Date().toLocaleDateString()}.csv`;
+        a.download = filename;
         a.click();
-        showToast("Data exported to CSV.");
+        showToast(`Smart Export: ${filename} ready.`);
     }
 
     // Attendance Logic
@@ -2649,14 +2985,28 @@
                 updateDashboard();
                 showToast("All attendance logs cleared.", "danger");
             } else if (supercodeAction === 'bulk-delete-validation') {
-                validationData = validationData.filter(d => !selectedValidationIds.includes(d.id));
+                let count = 0;
+                if (activeDataTab === 'SKU-level') {
+                    const globalStart = document.getElementById('global-start').value;
+                    const globalEnd = document.getElementById('global-end').value;
+                    const initialLen = validationData.length;
+                    validationData = validationData.filter(d => {
+                        const entryDate = normalizeDate(d.dateInput);
+                        const dateMatch = (!globalStart || entryDate >= globalStart) && (!globalEnd || entryDate <= globalEnd);
+                        return !(selectedSkus.includes(d.sku) && dateMatch);
+                    });
+                    count = initialLen - validationData.length;
+                    selectedSkus = [];
+                } else {
+                    count = selectedValidationIds.length;
+                    validationData = validationData.filter(d => !selectedValidationIds.includes(d.id));
+                    selectedValidationIds = [];
+                }
                 await db.set('validationData', validationData);
                 dataCurrentPage = 1;
                 renderValidationTable();
                 updateDashboard();
-                showToast(`Deleted ${selectedValidationIds.length} validation entries.`, "danger");
-                selectedValidationIds = [];
-                document.getElementById('select-all-val').checked = false;
+                showToast(`Deleted ${count} validation entries.`, "danger");
             }
             
             toggleSupercodeModal(false);
@@ -2781,7 +3131,8 @@
         if (dashboardSearchTerm) {
             const term = dashboardSearchTerm.toLowerCase();
             filteredMonitorItems = filteredMonitorItems.filter(d => 
-                (d.orderNum && d.orderNum.toLowerCase().includes(term)) ||
+                (d.orderNum && String(d.orderNum).toLowerCase().includes(term)) ||
+                (d.orderNums && d.orderNums.some(on => on.includes(term))) ||
                 (d.sku && d.sku.toLowerCase().includes(term)) ||
                 (d.desc && d.desc.toLowerCase().includes(term))
             );
@@ -2794,7 +3145,7 @@
 
             if (isA_OP !== isB_OP) return isA_OP ? -1 : 1;
 
-            if (activeDashboardTab === 'On-going') {
+            if (activeDashboardTab === 'On-going' || activeDashboardTab === 'SKU-level') {
                 const durA = calculateDurationMinutes(a.timeICStatus, nowTimeStr) || 0;
                 const durB = calculateDurationMinutes(b.timeICStatus, nowTimeStr) || 0;
                 return durB - durA;
@@ -2845,7 +3196,8 @@
                 const isOP = (item.platform || '').toUpperCase() === 'OP';
                 
                 let agingBadge = '';
-                if (activeDashboardTab === 'On-going' && item.timeICStatus) {
+                const isOngoing = activeDashboardTab === 'On-going' || (activeDashboardTab === 'SKU-level' && item.icStatus === 'On-going');
+                if (isOngoing && item.timeICStatus) {
                     const diff = calculateDurationMinutes(item.timeICStatus, nowTimeStr);
                     if (diff !== null) {
                         const h = Math.floor(diff / 60);
@@ -2858,7 +3210,8 @@
                 }
 
                 // Action Button for Pending SKU Assignment
-                const actionButton = activeDashboardTab.toLowerCase() === 'pending' ? `
+                const showAssign = (activeDashboardTab.toLowerCase() === 'pending' || (activeDashboardTab === 'SKU-level' && item.icStatus === 'Pending'));
+                const actionButton = showAssign ? `
                     <button class="btn btn-primary btn-sm" style="width: 100%; margin-top: 0.8rem; height: 32px; border-radius: 6px; font-weight: 700;" onclick="openSkuAssignment('${item.sku}')">
                         <i data-lucide="user-plus" style="width: 14px; height: 14px;"></i> ASSIGN SKU
                     </button>
@@ -2871,9 +3224,9 @@
                             <i data-lucide="zap" style="width:10px; height:10px;"></i> PRIORITY 1
                         </div>` : ''}
                         ${agingBadge}
-                        <img src="${imgUrl}" class="sku-image" alt="SKU Image" style="cursor: zoom-in;" onclick="zoomImage('${imgUrl}', '${item.sku}')" onerror="this.src='https://via.placeholder.com/200?text=No+Image'">
+                        <img src="${imgUrl}" class="sku-image" alt="SKU Image" style="cursor: zoom-in;" onclick="zoomImage('${imgUrl}', '${item.sku}')" onerror="this.src='https://via.placeholder.com/200?text=${item.sku}'">
                         <div style="width: 100%; text-align: left; border-bottom: 1px solid #eee; padding-bottom: 0.5rem; margin-bottom: 0.5rem;">
-                            <span style="font-size: 0.7rem; color: var(--secondary); font-weight: bold;">ORDER #${item.orderNum || 'N/A'}</span>
+                            <span style="font-size: 0.7rem; color: var(--secondary); font-weight: bold;">${activeDashboardTab === 'SKU-level' ? 'TOTAL ORDERS:' : 'ORDER #'} ${activeDashboardTab === 'SKU-level' ? item.orderCount : (item.orderNum || 'N/A')}</span>
                             <div style="font-weight: bold; font-size: 1.1rem;">SKU: ${item.sku}</div>
                         </div>
                         <div style="font-size: 0.85rem; color: var(--secondary); margin-bottom: 0.5rem; height: 2.8rem; overflow: hidden;">${item.desc}</div>
